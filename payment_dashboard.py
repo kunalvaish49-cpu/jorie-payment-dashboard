@@ -3,6 +3,8 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
+import requests
+import io
 
 # ── Page Config ────────────────────────────────────────────────────────────
 st.set_page_config(
