@@ -208,7 +208,7 @@ st.markdown("""
 # ── Load Data ──────────────────────────────────────────────────────────────
 @st.cache_data
 def load_data():
-    file_id = "16khtIX3YUNwR9YJvFmzDwXfBP0hedE1N"
+    file_id = "1Dl2CFax7f430d4R_UpXUByqK4QpZh1oS"
     url = f"https://drive.google.com/uc?export=download&id={file_id}&confirm=t"
     try:
         response = requests.get(url)
