@@ -209,22 +209,37 @@ st.markdown("""
 @st.cache_data
 def load_data():
     file_id = "1Dl2CFax7f430d4R_UpXUByqK4QpZh1oS"
-    url = f"https://drive.google.com/uc?export=download&id={file_id}&confirm=t"
     try:
-        response = requests.get(url)
-        df = pd.read_csv(io.StringIO(response.text), low_memory=False)
+        session = requests.Session()
+        # Step 1 — initial request to get confirm token
+        response = session.get(
+            f"https://drive.google.com/uc?export=download&id={file_id}",
+            stream=True
+        )
+        # Step 2 — extract confirm token from cookies
+        token = None
+        for key, value in response.cookies.items():
+            if key.startswith('download_warning'):
+                token = value
+                break
+        # Step 3 — re-request with confirm token if needed
+        if token:
+            response = session.get(
+                f"https://drive.google.com/uc?export=download&id={file_id}&confirm={token}",
+                stream=True
+            )
+        # Step 4 — read content as CSV
+        content = response.content.decode('utf-8')
+        df = pd.read_csv(io.StringIO(content), low_memory=False)
         df.columns = df.columns.str.strip()
-
         df['service_date'] = pd.to_datetime(df['service_date'], errors='coerce').dt.strftime('%m/%d/%Y')
         df['Date_Of_Entry'] = pd.to_datetime(df['Date_Of_Entry'], errors='coerce')
-
         for col in ['Total_Payment', 'InsPayment', 'PatPayment']:
             if col in df.columns:
                 df[col] = pd.to_numeric(
                     df[col].astype(str).str.replace('[$,]', '', regex=True),
                     errors='coerce'
                 ).fillna(0)
-
         if 'Allowed Contract' in df.columns:
             df['Allowed_Contract_Num'] = pd.to_numeric(
                 df['Allowed Contract'].astype(str).str.replace('[$,]', '', regex=True),
@@ -232,14 +247,13 @@ def load_data():
             ).fillna(0)
         else:
             df['Allowed_Contract_Num'] = 0
-
         df['Month_Label'] = df['Date_Of_Entry'].dt.strftime('%b-%y')
         df['Month_Num']   = df['Date_Of_Entry'].dt.month
         df['Year']        = df['Date_Of_Entry'].dt.year
-
         return df, None
     except Exception as e:
         return None, str(e)
+
 
 df, error = load_data()
 
