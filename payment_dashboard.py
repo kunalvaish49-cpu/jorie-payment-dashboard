@@ -212,49 +212,18 @@ def load_data():
     file_id = "1Y2xXFV5vAyHk0g6XJJV0kIVd9ZUwbUod"
     
     try:
-        import requests, io
+        import gdown
+        import io
+        import os
 
-        session = requests.Session()
+        output_path = "/tmp/Mapped_Output.csv"
 
-        # Step 1 — initial request
-        URL = "https://drive.google.com/uc?export=download"
-        response = session.get(URL, params={"id": file_id}, stream=True)
+        # Download only if not already cached on disk
+        if not os.path.exists(output_path):
+            url = f"https://drive.google.com/uc?id={file_id}"
+            gdown.download(url, output_path, quiet=False, fuzzy=True)
 
-        # Step 2 — handle large file confirmation (Google virus scan warning)
-        # For large files, Google returns a confirmation form — extract the token
-        token = None
-        for key, value in response.cookies.items():
-            if key.startswith("download_warning"):
-                token = value
-                break
-
-        # Also check response text for newer-style confirm token
-        if token is None and b"confirm=" in response.content:
-            import re
-            match = re.search(rb'confirm=([0-9A-Za-z_\-]+)', response.content)
-            if match:
-                token = match.group(1).decode()
-
-        # Step 3 — re-request with confirm token
-        if token:
-            response = session.get(
-                URL,
-                params={"id": file_id, "confirm": token},
-                stream=True
-            )
-
-        # Step 4 — accumulate streamed chunks (critical for large files)
-        chunks = []
-        for chunk in response.iter_content(chunk_size=1024 * 1024):  # 1MB chunks
-            if chunk:
-                chunks.append(chunk)
-        raw_bytes = b"".join(chunks)
-
-        # Step 5 — safety check: make sure we got CSV not HTML
-        if raw_bytes[:5] == b"<!DOC" or b"<html" in raw_bytes[:200].lower():
-            return None, "Google Drive returned an HTML page instead of CSV. Make sure the file is shared as 'Anyone with the link can view'."
-
-        df = pd.read_csv(io.BytesIO(raw_bytes), low_memory=False)
+        df = pd.read_csv(output_path, low_memory=False)
         df.columns = df.columns.str.strip()
 
         df['service_date'] = pd.to_datetime(df['service_date'], errors='coerce').dt.strftime('%m/%d/%Y')
