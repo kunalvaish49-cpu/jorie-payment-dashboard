@@ -490,7 +490,7 @@ with col_line:
             title=dict(text='Actual vs Allowed — by Financial Class', font=TITLE_FONT),
             yaxis_tickprefix='$', yaxis_ticksuffix='M', height=290
         )
-        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig, width='stretch', config={'displayModeBar': False})
 
 with col_trend:
     monthly = filtered.groupby('Month_Label').agg(
@@ -510,7 +510,7 @@ with col_trend:
         yaxis_tickprefix='$', yaxis_ticksuffix='K',
         bargap=0.25, bargroupgap=0.08
     )
-    st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
+    st.plotly_chart(fig2, width='stretch', config={'displayModeBar': False})
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -550,7 +550,7 @@ with col_pie:
             height=310, showlegend=True,
             legend=dict(bgcolor='rgba(0,0,0,0)', font=dict(color='#64748b', size=10), orientation='v', x=1, y=0.5)
         )
-        st.plotly_chart(fig3, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig3, width='stretch', config={'displayModeBar': False})
 
 with col_proc:
     if 'code' in filtered.columns:
@@ -579,7 +579,7 @@ with col_proc:
             xaxis_tickprefix='$', xaxis_ticksuffix='K',
         )
         fig_proc.update_xaxes(showgrid=True)
-        st.plotly_chart(fig_proc, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig_proc, width='stretch', config={'displayModeBar': False})
 
 with col_prov:
     if 'Doctor' in filtered.columns:
@@ -608,7 +608,7 @@ with col_prov:
             height=310,
             xaxis_tickprefix='$', xaxis_ticksuffix='K',
         )
-        st.plotly_chart(fig_prov, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig_prov, width='stretch', config={'displayModeBar': False})
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -644,7 +644,7 @@ with col_cat:
             height=300,
             xaxis_tickprefix='$', xaxis_ticksuffix='K',
         )
-        st.plotly_chart(fig5, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig5, width='stretch', config={'displayModeBar': False})
 
 with col_cpt:
     if 'code' in filtered.columns:
@@ -677,7 +677,7 @@ with col_cpt:
             xaxis_type='category',
             xaxis_tickangle=-35,
         )
-        st.plotly_chart(fig_cpt, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig_cpt, width='stretch', config={'displayModeBar': False})
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ── Procedure Contract Rate vs Year (2025 vs 2026) — Avg Payment & Contract
@@ -734,7 +734,7 @@ if 'code' in filtered.columns and 'Year' in filtered.columns:
             bargap=0.25, bargroupgap=0.08,
             xaxis_type='category', xaxis_tickangle=-35,
         )
-        st.plotly_chart(fig_yr1, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig_yr1, width='stretch', config={'displayModeBar': False})
 
     with col_yr2:
         fig_yr2 = go.Figure()
@@ -760,7 +760,7 @@ if 'code' in filtered.columns and 'Year' in filtered.columns:
             bargap=0.25, bargroupgap=0.08,
             xaxis_type='category', xaxis_tickangle=-35,
         )
-        st.plotly_chart(fig_yr2, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig_yr2, width='stretch', config={'displayModeBar': False})
 
     if 2025 in years_present and 2026 in years_present:
         avg_pay_25 = yr_grp[yr_grp['Year'] == 2025]['Avg_Payment'].mean()
@@ -842,7 +842,7 @@ with col_var:
             title=dict(text='Variance Status Distribution', font=TITLE_FONT),
             height=270,
         )
-        st.plotly_chart(fig6, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig6, width='stretch', config={'displayModeBar': False})
 
 with col_doc:
     if 'Doctor' in filtered.columns:
@@ -864,7 +864,7 @@ with col_doc:
             yaxis_tickprefix='$', yaxis_ticksuffix='K',
             bargap=0.25, bargroupgap=0.06
         )
-        st.plotly_chart(fig7, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig7, width='stretch', config={'displayModeBar': False})
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -878,7 +878,7 @@ show_cols = [c for c in [
     'Total_Payment', 'Allowed Contract', 'Variance', 'Variance Amount'
 ] if c in filtered.columns]
 
-st.dataframe(filtered[show_cols].head(500), use_container_width=True, height=330)
+st.dataframe(filtered[show_cols].head(500), width='stretch', height=330)
 
 st.markdown(
     f"<div style='font-size:11px; color:#94a3b8; text-align:right; margin-top:6px; font-weight:500;'>"
