@@ -206,9 +206,11 @@ st.markdown("""
 # ── Load Data ──────────────────────────────────────────────────────────────
 @st.cache_data
 def load_data():
-    file2 = r"C:\Users\KunalVaish\OneDrive - Jorie AI\Cartage\Final Reports_Carthage\Carthage_AR_Documents\Contract Rate Mapping\Mapped_Output.csv"
+    file_id = "16khtIX3YUNwR9YJvFmzDwXfBP0hedE1N"
+    url = f"https://drive.google.com/uc?export=download&id={file_id}&confirm=t"
     try:
-        df = pd.read_csv(file2, low_memory=False)
+        response = requests.get(url)
+        df = pd.read_csv(io.StringIO(response.text), low_memory=False)
         df.columns = df.columns.str.strip()
 
         df['service_date'] = pd.to_datetime(df['service_date'], errors='coerce').dt.strftime('%m/%d/%Y')
