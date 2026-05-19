@@ -221,7 +221,7 @@ def load_data():
         # Download only if not already cached on disk
         if not os.path.exists(output_path):
             url = f"https://drive.google.com/uc?id={file_id}"
-            gdown.download(url, output_path, quiet=False, fuzzy=True)
+            gdown.download(url, output_path, quiet=False)
 
         df = pd.read_csv(output_path, low_memory=False)
         df.columns = df.columns.str.strip()
