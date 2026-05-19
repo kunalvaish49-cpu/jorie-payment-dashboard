@@ -206,40 +206,67 @@ st.markdown("""
 
 
 # ── Load Data ──────────────────────────────────────────────────────────────
+
 @st.cache_data
 def load_data():
     file_id = "1Y2xXFV5vAyHk0g6XJJV0kIVd9ZUwbUod"
+    
     try:
+        import requests, io
+
         session = requests.Session()
-        # Step 1 — initial request to get confirm token
-        response = session.get(
-            f"https://drive.google.com/uc?export=download&id={file_id}",
-            stream=True
-        )
-        # Step 2 — extract confirm token from cookies
+
+        # Step 1 — initial request
+        URL = "https://drive.google.com/uc?export=download"
+        response = session.get(URL, params={"id": file_id}, stream=True)
+
+        # Step 2 — handle large file confirmation (Google virus scan warning)
+        # For large files, Google returns a confirmation form — extract the token
         token = None
         for key, value in response.cookies.items():
-            if key.startswith('download_warning'):
+            if key.startswith("download_warning"):
                 token = value
                 break
-        # Step 3 — re-request with confirm token if needed
+
+        # Also check response text for newer-style confirm token
+        if token is None and b"confirm=" in response.content:
+            import re
+            match = re.search(rb'confirm=([0-9A-Za-z_\-]+)', response.content)
+            if match:
+                token = match.group(1).decode()
+
+        # Step 3 — re-request with confirm token
         if token:
             response = session.get(
-                f"https://drive.google.com/uc?export=download&id={file_id}&confirm={token}",
+                URL,
+                params={"id": file_id, "confirm": token},
                 stream=True
             )
-        # Step 4 — read content as CSV
-        content = response.content.decode('utf-8')
-        df = pd.read_csv(io.StringIO(content), low_memory=False)
+
+        # Step 4 — accumulate streamed chunks (critical for large files)
+        chunks = []
+        for chunk in response.iter_content(chunk_size=1024 * 1024):  # 1MB chunks
+            if chunk:
+                chunks.append(chunk)
+        raw_bytes = b"".join(chunks)
+
+        # Step 5 — safety check: make sure we got CSV not HTML
+        if raw_bytes[:5] == b"<!DOC" or b"<html" in raw_bytes[:200].lower():
+            return None, "Google Drive returned an HTML page instead of CSV. Make sure the file is shared as 'Anyone with the link can view'."
+
+        df = pd.read_csv(io.BytesIO(raw_bytes), low_memory=False)
         df.columns = df.columns.str.strip()
+
         df['service_date'] = pd.to_datetime(df['service_date'], errors='coerce').dt.strftime('%m/%d/%Y')
         df['Date_Of_Entry'] = pd.to_datetime(df['Date_Of_Entry'], errors='coerce')
+
         for col in ['Total_Payment', 'InsPayment', 'PatPayment']:
             if col in df.columns:
                 df[col] = pd.to_numeric(
                     df[col].astype(str).str.replace('[$,]', '', regex=True),
                     errors='coerce'
                 ).fillna(0)
+
         if 'Allowed Contract' in df.columns:
             df['Allowed_Contract_Num'] = pd.to_numeric(
                 df['Allowed Contract'].astype(str).str.replace('[$,]', '', regex=True),
@@ -247,10 +274,13 @@ def load_data():
             ).fillna(0)
         else:
             df['Allowed_Contract_Num'] = 0
+
         df['Month_Label'] = df['Date_Of_Entry'].dt.strftime('%b-%y')
         df['Month_Num']   = df['Date_Of_Entry'].dt.month
         df['Year']        = df['Date_Of_Entry'].dt.year
+
         return df, None
+
     except Exception as e:
         return None, str(e)
 
