@@ -358,27 +358,23 @@ under_mask = filtered['Total_Payment'] < filtered['Allowed_Contract_Num']
 over_mask  = filtered['Total_Payment'] > filtered['Allowed_Contract_Num']
 match_mask = filtered['Total_Payment'] == filtered['Allowed_Contract_Num']
 
-under_payment_amt = (filtered.loc[under_mask, 'Allowed_Contract_Num'] - filtered.loc[under_mask, 'Total_Payment']).sum()
-over_payment_amt  = (filtered.loc[over_mask,  'Total_Payment'] - filtered.loc[over_mask,  'Allowed_Contract_Num']).sum()
-
 total_procedures    = len(filtered)
 under_payment_count = under_mask.sum()
 over_payment_count  = over_mask.sum()
-# Filter to only 'Mapped Contract' category
-mapped_mask = filtered['Categories'] == 'Mapped Contract'
 
-# % Procedures Under Paid — Less Than Contract / Allowed Contract (Mapped Contract only)
-mapped_under     = filtered[mapped_mask & under_mask]
-mapped_over      = filtered[mapped_mask & over_mask]
-mapped_allowed   = filtered[mapped_mask]['Allowed_Contract_Num'].sum()
-mapped_actual    = filtered[mapped_mask]['Total_Payment'].sum()
+# Mapped Contract only — for KPI cards
+mapped_mask    = filtered['Categories'] == 'Mapped Contract'
+mapped_under   = filtered[mapped_mask & under_mask]
+mapped_over    = filtered[mapped_mask & over_mask]
+mapped_allowed = filtered[mapped_mask]['Allowed_Contract_Num'].sum()
+mapped_actual  = filtered[mapped_mask]['Total_Payment'].sum()
 
-under_payment_amt   = (mapped_under['Allowed_Contract_Num'] - mapped_under['Total_Payment']).sum()
-over_payment_amt    = (mapped_over['Total_Payment'] - mapped_over['Allowed_Contract_Num']).sum()
+under_payment_amt  = (mapped_under['Allowed_Contract_Num'] - mapped_under['Total_Payment']).sum()
+over_payment_amt   = (mapped_over['Total_Payment'] - mapped_over['Allowed_Contract_Num']).sum()
 
-pct_under           = (under_payment_amt / mapped_allowed * 100) if mapped_allowed > 0 else 0
-under_pct_of_total  = (under_payment_amt / mapped_allowed * 100) if mapped_allowed > 0 else 0
-recovery_rate       = (mapped_actual / mapped_allowed * 100) if mapped_allowed > 0 else 0
+pct_under          = (under_payment_amt / mapped_allowed * 100) if mapped_allowed > 0 else 0
+under_pct_of_total = (under_payment_amt / mapped_allowed * 100) if mapped_allowed > 0 else 0
+recovery_rate      = (mapped_actual / mapped_allowed * 100) if mapped_allowed > 0 else 0
 
 
 # ═══════════════════════════════════════════════════════════════════════════
