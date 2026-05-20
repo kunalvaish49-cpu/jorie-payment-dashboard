@@ -314,7 +314,7 @@ with st.sidebar:
         selected_year = selected_month = selected_carrier = selected_variance = selected_fc = selected_cpt = selected_code = 'All'
 
     st.markdown("<hr style='border:none; border-top:1.5px solid #f1f5f9; margin-top:28px;'>", unsafe_allow_html=True)
-    st.markdown("<div style='font-size:10px; color:#cbd5e1; text-align:center; padding-top:8px; font-weight:600; letter-spacing:0.8px;'>CARTHAGE AR · JORIE AI</div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size:10px; color:#cbd5e1; text-align:center; padding-top:8px; font-weight:600; letter-spacing:0.8px;'>One AR · JORIE AI</div>", unsafe_allow_html=True)
 
 
 # ── Error / No Data fallback ───────────────────────────────────────────────
@@ -386,7 +386,7 @@ with col_title:
     filter_badge = f"<span class='badge badge-blue'>{active_filters} filter{'s' if active_filters!=1 else ''} active</span>" if active_filters else ""
     st.markdown(f"""
         <div class='dash-title'>Payment Analysis &nbsp;·&nbsp; Under &amp; Over Payment Overview &nbsp;{filter_badge}</div>
-        <div class='dash-subtitle'>Carthage AR &nbsp;·&nbsp; Contract Rate Variance Intelligence &nbsp;·&nbsp; {total_procedures:,} procedures in view</div>
+        <div class='dash-subtitle'>One AR &nbsp;·&nbsp; Contract Rate Variance Intelligence &nbsp;·&nbsp; {total_procedures:,} procedures in view</div>
     """, unsafe_allow_html=True)
 
 st.markdown("<div style='margin-top:22px;'></div>", unsafe_allow_html=True)
