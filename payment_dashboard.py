@@ -482,7 +482,7 @@ with col_line:
             title=dict(text='Actual vs Allowed — by Financial Class', font=TITLE_FONT),
             yaxis_tickprefix='$', yaxis_ticksuffix='M', height=290
         )
-        st.plotly_chart(fig, width='stretch', config={'displayModeBar': False})
+        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 with col_trend:
     monthly = filtered.groupby('Month_Label').agg(
@@ -606,7 +606,7 @@ with col_prov:
 # ═══════════════════════════════════════════════════════════════════════════
 # ── Under Payment — Top 5 CPT Categories + Top 10 CPT Actual vs Allowed
 # ═══════════════════════════════════════════════════════════════════════════
-st.markdown("<div class='section-header'>Under Payment — CPT Category &amp; Procedure Analysis</div>", unsafe_allow_html=True)
+st.markdown("<div class='section-header'>Under Payment — CPT Categories &amp; Procedure Analysis</div>", unsafe_allow_html=True)
 col_cat, col_cpt = st.columns([1, 2])
 
 with col_cat:
@@ -870,7 +870,7 @@ show_cols = [c for c in [
     'Total_Payment', 'Allowed Contract', 'Variance', 'Variance Amount'
 ] if c in filtered.columns]
 
-st.dataframe(filtered[show_cols].head(500), width='stretch', height=330)
+st.dataframe(filtered[show_cols].head(500), use_container_width=True, height=330)
 
 st.markdown(
     f"<div style='font-size:11px; color:#94a3b8; text-align:right; margin-top:6px; font-weight:500;'>"
