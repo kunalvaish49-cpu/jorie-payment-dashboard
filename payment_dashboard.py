@@ -354,12 +354,14 @@ total_procedures    = len(filtered)
 under_payment_count = under_mask.sum()
 over_payment_count  = over_mask.sum()
 
-# Mapped Contract only — for KPI cards
+# KPI cards — Mapped Contract rows where available, else all filtered rows
 mapped_mask    = filtered['Categories'] == 'Mapped Contract'
-mapped_under   = filtered[mapped_mask & under_mask]
-mapped_over    = filtered[mapped_mask & over_mask]
-mapped_allowed = filtered[mapped_mask]['Allowed_Contract_Num'].sum()
-mapped_actual  = filtered[mapped_mask]['Total_Payment'].sum()
+mapped_df      = filtered[mapped_mask] if mapped_mask.sum() > 0 else filtered
+
+mapped_under   = mapped_df[mapped_df['Total_Payment'] < mapped_df['Allowed_Contract_Num']]
+mapped_over    = mapped_df[mapped_df['Total_Payment'] > mapped_df['Allowed_Contract_Num']]
+mapped_allowed = mapped_df['Allowed_Contract_Num'].sum()
+mapped_actual  = mapped_df['Total_Payment'].sum()
 
 under_payment_amt  = (mapped_under['Allowed_Contract_Num'] - mapped_under['Total_Payment']).sum()
 over_payment_amt   = (mapped_over['Total_Payment'] - mapped_over['Allowed_Contract_Num']).sum()
