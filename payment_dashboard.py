@@ -6,6 +6,7 @@ import numpy as np
 import requests
 import io
 
+
 # ── Page Config ────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Payment Analysis Dashboard",
@@ -264,7 +265,6 @@ TITLE_FONT = dict(color='#1e293b', size=13, family='Plus Jakarta Sans')
 PALETTE = ['#3b82f6','#ef4444','#8b5cf6','#f59e0b','#10b981','#ec4899','#06b6d4','#f97316']
 PALETTE_BLUE = ['#1d4ed8','#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe','#dbeafe','#eff6ff']
 
-
 # ── Sidebar ────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("""
@@ -289,32 +289,32 @@ with st.sidebar:
         cpt_options      = ['All'] + sorted(df['CPT_Category'].dropna().unique().tolist())       if 'CPT_Category'      in df.columns else ['All']
 
         st.markdown("<div class='sidebar-label'>Year</div>", unsafe_allow_html=True)
-        selected_year = st.selectbox("Year", year_options, label_visibility="collapsed", key="year")
+        selected_year = st.multiselect("Year", year_options[1:], default=[], key="year", placeholder="All", label_visibility="collapsed")
 
         st.markdown("<div class='sidebar-label'>Month</div>", unsafe_allow_html=True)
-        selected_month = st.selectbox("Month", month_options, label_visibility="collapsed", key="month")
+        selected_month = st.multiselect("Month", month_options[1:], default=[], key="month", placeholder="All", label_visibility="collapsed")
 
         st.markdown("<div class='sidebar-label'>Insurance Carrier</div>", unsafe_allow_html=True)
-        selected_carrier = st.selectbox("Carrier", carrier_options, label_visibility="collapsed", key="carrier")
+        selected_carrier = st.multiselect("Carrier", carrier_options[1:], default=[], key="carrier", placeholder="All", label_visibility="collapsed")
 
         st.markdown("<div class='sidebar-label'>Variance Status</div>", unsafe_allow_html=True)
-        selected_variance = st.selectbox("Variance", variance_options, label_visibility="collapsed", key="variance")
+        selected_variance = st.multiselect("Variance", variance_options[1:], default=[], key="variance", placeholder="All", label_visibility="collapsed")
 
         st.markdown("<div class='sidebar-label'>Financial Class</div>", unsafe_allow_html=True)
-        selected_fc = st.selectbox("Financial Class", fc_options, label_visibility="collapsed", key="fc")
+        selected_fc = st.multiselect("Financial Class", fc_options[1:], default=[], key="fc", placeholder="All", label_visibility="collapsed")
 
         st.markdown("<div class='sidebar-label'>CPT Category</div>", unsafe_allow_html=True)
-        selected_cpt = st.selectbox("CPT Category", cpt_options, label_visibility="collapsed", key="cpt")
+        selected_cpt = st.multiselect("CPT Category", cpt_options[1:], default=[], key="cpt", placeholder="All", label_visibility="collapsed")
 
-        code_options = ['All'] + sorted(df['code'].dropna().astype(str).unique().tolist()) if 'code' in df.columns else ['All']
+        code_options = sorted(df['code'].dropna().astype(str).unique().tolist()) if 'code' in df.columns else []
         st.markdown("<div class='sidebar-label'>CPT Code</div>", unsafe_allow_html=True)
-        selected_code = st.selectbox("CPT Code", code_options, label_visibility="collapsed", key="cpt_code")
+        selected_code = st.multiselect("CPT Code", code_options, default=[], key="cpt_code", placeholder="All", label_visibility="collapsed")
 
     else:
         selected_year = selected_month = selected_carrier = selected_variance = selected_fc = selected_cpt = selected_code = 'All'
 
     st.markdown("<hr style='border:none; border-top:1.5px solid #f1f5f9; margin-top:28px;'>", unsafe_allow_html=True)
-    st.markdown("<div style='font-size:10px; color:#cbd5e1; text-align:center; padding-top:8px; font-weight:600; letter-spacing:0.8px;'>One AR · JORIE AI</div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size:10px; color:#cbd5e1; text-align:center; padding-top:8px; font-weight:600; letter-spacing:0.8px;'>ONE AR · JORIE AI</div>", unsafe_allow_html=True)
 
 
 # ── Error / No Data fallback ───────────────────────────────────────────────
@@ -326,20 +326,20 @@ if error or df is None:
 
 # ── Apply Filters ──────────────────────────────────────────────────────────
 filtered = df.copy()
-if selected_year != 'All':
-    filtered = filtered[filtered['Year'] == int(selected_year)]
-if selected_month != 'All':
-    filtered = filtered[filtered['Month_Label'] == selected_month]
-if selected_carrier != 'All' and 'Insurance_Carrier' in filtered.columns:
-    filtered = filtered[filtered['Insurance_Carrier'] == selected_carrier]
-if selected_variance != 'All' and 'Variance' in filtered.columns:
-    filtered = filtered[filtered['Variance'] == selected_variance]
-if selected_fc != 'All' and 'Update_FC' in filtered.columns:
-    filtered = filtered[filtered['Update_FC'] == selected_fc]
-if selected_cpt != 'All' and 'CPT_Category' in filtered.columns:
-    filtered = filtered[filtered['CPT_Category'] == selected_cpt]
-if selected_code != 'All' and 'code' in filtered.columns:
-    filtered = filtered[filtered['code'].astype(str) == selected_code]
+if selected_year:
+    filtered = filtered[filtered['Year'].astype(str).isin([str(y) for y in selected_year])]
+if selected_month:
+    filtered = filtered[filtered['Month_Label'].isin(selected_month)]
+if selected_carrier and 'Insurance_Carrier' in filtered.columns:
+    filtered = filtered[filtered['Insurance_Carrier'].isin(selected_carrier)]
+if selected_variance and 'Variance' in filtered.columns:
+    filtered = filtered[filtered['Variance'].isin(selected_variance)]
+if selected_fc and 'Update_FC' in filtered.columns:
+    filtered = filtered[filtered['Update_FC'].isin(selected_fc)]
+if selected_cpt and 'CPT_Category' in filtered.columns:
+    filtered = filtered[filtered['CPT_Category'].isin(selected_cpt)]
+if selected_code and 'code' in filtered.columns:
+    filtered = filtered[filtered['code'].astype(str).isin(selected_code)]
 
 
 # ── Derived Metrics ────────────────────────────────────────────────────────
@@ -377,18 +377,18 @@ recovery_rate      = (mapped_actual / mapped_allowed * 100) if mapped_allowed > 
 _, col_title = st.columns([1, 10])
 with col_title:
     active_filters = sum([
-        selected_year    != 'All',
-        selected_month   != 'All',
-        selected_carrier != 'All',
-        selected_variance!= 'All',
-        selected_fc      != 'All',
-        selected_cpt     != 'All',
-        selected_code    != 'All',
+        len(selected_year)     > 0,
+        len(selected_month)    > 0,
+        len(selected_carrier)  > 0,
+        len(selected_variance) > 0,
+        len(selected_fc)       > 0,
+        len(selected_cpt)      > 0,
+        len(selected_code)     > 0,
     ])
     filter_badge = f"<span class='badge badge-blue'>{active_filters} filter{'s' if active_filters!=1 else ''} active</span>" if active_filters else ""
     st.markdown(f"""
         <div class='dash-title'>Payment Analysis &nbsp;·&nbsp; Under &amp; Over Payment Overview &nbsp;{filter_badge}</div>
-        <div class='dash-subtitle'>One AR &nbsp;·&nbsp; Contract Rate Variance Intelligence &nbsp;·&nbsp; {total_procedures:,} procedures in view</div>
+        <div class='dash-subtitle'>ONE AR &nbsp;·&nbsp; Contract Rate Variance Intelligence &nbsp;·&nbsp; {total_procedures:,} procedures in view</div>
     """, unsafe_allow_html=True)
 
 st.markdown("<div style='margin-top:22px;'></div>", unsafe_allow_html=True)
@@ -435,7 +435,7 @@ with c4:
         <div class='metric-bg-icon'>📈</div>
         <div class='metric-label'>Over Payment $</div>
         <div class='metric-value'>${over_payment_amt/1e6:.2f}M</div>
-        <div class='metric-sub'>{over_payment_count:,} over-paid claims</div>
+        <div class='metric-sub'>{len(mapped_over):,} over-paid claims</div>
         <span class='badge badge-green'>Potential refund exposure</span>
     </div>""", unsafe_allow_html=True)
 
@@ -458,30 +458,41 @@ st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
 st.markdown("<div class='section-header'>Financial Overview</div>", unsafe_allow_html=True)
 col_line, col_trend = st.columns([3, 2])
 
+
 with col_line:
     if 'Update_FC' in filtered.columns:
-        fc_grp = filtered.groupby('Update_FC').agg(
-            Actual=('Total_Payment', 'sum'),
-            Allowed=('Allowed_Contract_Num', 'sum')
-        ).reset_index().sort_values('Actual', ascending=False).head(8)
+        if selected_fc and 'Insurance_Carrier' in filtered.columns:
+            fc_grp = filtered.groupby('Insurance_Carrier').agg(
+                Actual=('Total_Payment', 'sum'),
+                Allowed=('Allowed_Contract_Num', 'sum')
+            ).reset_index().sort_values('Actual', ascending=False).head(8)
+            x_col = 'Insurance_Carrier'
+            chart_title = f'Actual vs Allowed — by Carrier ({selected_fc})'
+        else:
+            fc_grp = filtered.groupby('Update_FC').agg(
+                Actual=('Total_Payment', 'sum'),
+                Allowed=('Allowed_Contract_Num', 'sum')
+            ).reset_index().sort_values('Actual', ascending=False).head(8)
+            x_col = 'Update_FC'
+            chart_title = 'Actual vs Allowed — by Financial Class'
 
         fig = go.Figure()
         fig.add_trace(go.Scatter(
-            x=fc_grp['Update_FC'], y=fc_grp['Actual']/1e6,
-            mode='lines+markers', name='Actual Payment',
+            x=fc_grp[x_col], y=fc_grp['Actual']/1e6,
+            mode='lines+markers' if len(fc_grp) > 1 else 'markers', name='Actual Payment',
             line=dict(color='#3b82f6', width=3),
             marker=dict(size=9, color='#3b82f6', line=dict(color='#1d4ed8', width=2)),
             fill='tozeroy', fillcolor='rgba(59,130,246,0.06)'
         ))
         fig.add_trace(go.Scatter(
-            x=fc_grp['Update_FC'], y=fc_grp['Allowed']/1e6,
-            mode='lines+markers', name='Contract Allowed',
+            x=fc_grp[x_col], y=fc_grp['Allowed']/1e6,
+            mode='lines+markers' if len(fc_grp) > 1 else 'markers', name='Contract Allowed',
             line=dict(color='#f59e0b', width=2.5, dash='dot'),
             marker=dict(size=7, color='#f59e0b')
         ))
         fig.update_layout(**PLOTLY_BASE,
             legend=LEGEND,
-            title=dict(text='Actual vs Allowed — by Financial Class', font=TITLE_FONT),
+            title=dict(text=chart_title, font=TITLE_FONT),
             yaxis_tickprefix='$', yaxis_ticksuffix='M', height=290
         )
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
@@ -548,9 +559,12 @@ with col_pie:
 
 with col_proc:
     if 'code' in filtered.columns:
-        _pu = filtered[under_mask].copy()
-        _pu['_gap'] = _pu['Allowed_Contract_Num'] - _pu['Total_Payment']
+        _pu = filtered[mapped_mask & under_mask].copy() if mapped_mask.sum() > 0 else filtered[under_mask].copy()
+        _pu['code'] = _pu['code'].astype(str).str.strip().str.replace(r'\.0$', '', regex=True)
+        _pu = _pu[_pu['code'].notna() & (_pu['code'] != '') & (_pu['code'] != 'nan')]
+        _pu['_gap'] = (_pu['Allowed_Contract_Num'] - _pu['Total_Payment']).clip(lower=0)
         proc_under = _pu.groupby('code').agg(Under_Gap=('_gap', 'sum')).reset_index()
+        proc_under = proc_under[proc_under['Under_Gap'] > 0]
         proc_under = proc_under.sort_values('Under_Gap', ascending=True).tail(8)
 
         fig_proc = go.Figure(go.Bar(
@@ -567,19 +581,35 @@ with col_proc:
             textposition='outside',
             textfont=dict(color='#64748b', size=10)
         ))
-        fig_proc.update_layout(**PLOTLY_BASE,
+        fig_proc.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(family='Plus Jakarta Sans', color='#64748b', size=11),
+            margin=dict(l=12, r=60, t=38, b=12),
             title=dict(text='Under Payment Gap — Top Procedures', font=TITLE_FONT),
             height=310,
-            xaxis_tickprefix='$', xaxis_ticksuffix='K',
+            xaxis=dict(
+                gridcolor='#f1f5f9', zeroline=False,
+                tickfont=dict(color='#94a3b8', size=10),
+                linecolor='#e2e8f0',
+                tickprefix='$', ticksuffix='K'
+            ),
+            yaxis=dict(
+                gridcolor='#f1f5f9', zeroline=False,
+                tickfont=dict(color='#94a3b8', size=10),
+                linecolor='#e2e8f0',
+                type='category'
+            ),
         )
-        fig_proc.update_xaxes(showgrid=True)
         st.plotly_chart(fig_proc, width='stretch', config={'displayModeBar': False})
 
 with col_prov:
     if 'Doctor' in filtered.columns:
-        _prov = filtered[under_mask].copy()
-        _prov['_gap'] = _prov['Allowed_Contract_Num'] - _prov['Total_Payment']
+        # Use only Mapped Contract rows — same as KPIs
+        _prov = filtered[mapped_mask & under_mask].copy() if mapped_mask.sum() > 0 else filtered[under_mask].copy()
+        _prov['_gap'] = (_prov['Allowed_Contract_Num'] - _prov['Total_Payment']).clip(lower=0)
         prov_under = _prov.groupby('Doctor').agg(Under_Gap=('_gap', 'sum')).reset_index()
+        prov_under = prov_under[prov_under['Under_Gap'] > 0]
         prov_under = prov_under.sort_values('Under_Gap', ascending=True).tail(8)
         prov_under['label'] = prov_under['Doctor'].str[:22]
 
@@ -597,10 +627,25 @@ with col_prov:
             textposition='outside',
             textfont=dict(color='#64748b', size=10)
         ))
-        fig_prov.update_layout(**PLOTLY_BASE,
+        fig_prov.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(family='Plus Jakarta Sans', color='#64748b', size=11),
+            margin=dict(l=12, r=60, t=38, b=12),
             title=dict(text='Under Payment Gap — Top Providers', font=TITLE_FONT),
             height=310,
-            xaxis_tickprefix='$', xaxis_ticksuffix='K',
+            xaxis=dict(
+                gridcolor='#f1f5f9', zeroline=False,
+                tickfont=dict(color='#94a3b8', size=10),
+                linecolor='#e2e8f0',
+                tickprefix='$', ticksuffix='K'
+            ),
+            yaxis=dict(
+                gridcolor='#f1f5f9', zeroline=False,
+                tickfont=dict(color='#94a3b8', size=10),
+                linecolor='#e2e8f0',
+                type='category'
+            ),
         )
         st.plotly_chart(fig_prov, width='stretch', config={'displayModeBar': False})
 
@@ -608,7 +653,7 @@ with col_prov:
 # ═══════════════════════════════════════════════════════════════════════════
 # ── Under Payment — Top 5 CPT Categories + Top 10 CPT Actual vs Allowed
 # ═══════════════════════════════════════════════════════════════════════════
-st.markdown("<div class='section-header'>Under Payment — CPT Categories &amp; Procedure Analysis</div>", unsafe_allow_html=True)
+st.markdown("<div class='section-header'>Under Payment — CPT Category &amp; Procedure Analysis</div>", unsafe_allow_html=True)
 col_cat, col_cpt = st.columns([1, 2])
 
 with col_cat:
@@ -642,11 +687,14 @@ with col_cat:
 
 with col_cpt:
     if 'code' in filtered.columns:
-        cpt_grp = filtered.groupby('code').agg(
+        _cpt_filtered = filtered.copy()
+        _cpt_filtered['code'] = _cpt_filtered['code'].astype(str).str.strip().str.replace(r'\.0$', '', regex=True)
+        _cpt_filtered = _cpt_filtered[_cpt_filtered['code'].notna() & (_cpt_filtered['code'] != '') & (_cpt_filtered['code'] != 'nan')]
+        cpt_grp = _cpt_filtered.groupby('code').agg(
             Actual=('Total_Payment', 'sum'),
             Allowed=('Allowed_Contract_Num', 'sum')
         ).reset_index().sort_values('Allowed', ascending=False).head(10)
-        cpt_grp['code_str'] = cpt_grp['code'].astype(str)
+        cpt_grp['code_str'] = cpt_grp['code']
         cpt_grp['Gap']      = (cpt_grp['Allowed'] - cpt_grp['Actual']).clip(lower=0)
 
         cpt_labels = cpt_grp['code_str'].tolist()
@@ -677,19 +725,21 @@ with col_cpt:
 # ── Procedure Contract Rate vs Year (2025 vs 2026) — Avg Payment & Contract
 # ═══════════════════════════════════════════════════════════════════════════
 if 'code' in filtered.columns and 'Year' in filtered.columns:
-    _yoy_title = f"CPT {selected_code} — Avg Payment &amp; Contract Rate (2025 vs 2026)" if selected_code != 'All' else "Procedure Contract Rate vs Year — Avg Payment &amp; Avg Contract Rate (2025 vs 2026)"
+    _code_label = ', '.join(selected_code) if selected_code else 'All'
+    _yoy_title = f"CPT {_code_label} — Avg Payment &amp; Contract Rate (2025 vs 2026)" if selected_code else "Procedure Contract Rate vs Year — Avg Payment &amp; Avg Contract Rate (2025 vs 2026)"
     st.markdown(f"<div class='section-header'>{_yoy_title}</div>", unsafe_allow_html=True)
 
-    if selected_code != 'All':
-        # Single CPT code selected — use it directly, no top_codes limiting
-        yr_df = filtered.copy()
+    mapped_yr = filtered[filtered['Categories'] == 'Mapped Contract'] if 'Categories' in filtered.columns and (filtered['Categories'] == 'Mapped Contract').sum() > 0 else filtered
+
+    if selected_code:
+        yr_df = mapped_yr.copy()
         yr_df['code_str'] = yr_df['code'].astype(str)
     else:
         top_codes = (
-            filtered.groupby('code')['Total_Payment']
+            mapped_yr.groupby('code')['Total_Payment']
             .sum().nlargest(12).index.tolist()
         )
-        yr_df = filtered[filtered['code'].isin(top_codes)].copy()
+        yr_df = mapped_yr[mapped_yr['code'].isin(top_codes)].copy()
         yr_df['code_str'] = yr_df['code'].astype(str)
 
     yr_grp = yr_df.groupby(['code_str', 'Year']).agg(
