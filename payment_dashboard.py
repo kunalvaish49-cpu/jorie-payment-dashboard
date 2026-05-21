@@ -200,7 +200,21 @@ st.markdown("""
         box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
 
-    #MainMenu, footer, header { visibility: hidden; }
+    [data-testid="stToolbar"] { display: none !important; }
+    header { background: transparent !important; }
+
+    /* Force sidebar always open, hide the close X inside it */
+    [data-testid="stSidebar"] {
+        min-width: 244px !important;
+        max-width: 244px !important;
+        transform: none !important;
+        visibility: visible !important;
+    }
+    [data-testid="stSidebar"] button[kind="header"],
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="baseButton-headerNoPadding"] {
+        display: none !important;
+    }
     .block-container { padding-top: 1.5rem; padding-bottom: 1rem; }
 </style>
 """, unsafe_allow_html=True)
@@ -374,7 +388,21 @@ recovery_rate      = (mapped_actual / mapped_allowed * 100) if mapped_allowed > 
 # ═══════════════════════════════════════════════════════════════════════════
 # ── Header
 # ═══════════════════════════════════════════════════════════════════════════
-_, col_title = st.columns([1, 10])
+col_title, col_logo = st.columns([10, 1])
+with col_logo:
+    st.markdown("""
+        <div style='display:flex; justify-content:flex-end; align-items:center; padding-top:6px;'>
+            <a href='https://github.com/kunalvaish49-cpu/VisualCode_UB-04' target='_blank' 
+               style='text-decoration:none;'>
+                <img src='https://raw.githubusercontent.com/kunalvaish49-cpu/VisualCode_UB-04/20be2ac615bd0074353bf7f7b9784af81e6cc040/Jorie%20AI%20Image.webp'
+                     style='height:96px; width:auto; border-radius:10px; 
+                            box-shadow:0 2px 10px rgba(0,0,0,0.12);'
+                     title='Jorie AI — GitHub'
+                />
+            </a>
+        </div>
+    """, unsafe_allow_html=True)
+
 with col_title:
     active_filters = sum([
         len(selected_year)     > 0,
@@ -390,8 +418,6 @@ with col_title:
         <div class='dash-title'>Payment Analysis &nbsp;·&nbsp; Under &amp; Over Payment Overview &nbsp;{filter_badge}</div>
         <div class='dash-subtitle'>ONE AR &nbsp;·&nbsp; Contract Rate Variance Intelligence &nbsp;·&nbsp; {total_procedures:,} procedures in view</div>
     """, unsafe_allow_html=True)
-
-st.markdown("<div style='margin-top:22px;'></div>", unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
