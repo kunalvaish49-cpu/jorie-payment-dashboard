@@ -948,10 +948,26 @@ show_cols = [c for c in [
     'Total_Payment', 'Allowed Contract', 'Variance', 'Variance Amount'
 ] if c in filtered.columns]
 
-st.dataframe(filtered[show_cols].head(500), use_container_width=True, height=330)
+table_df = filtered[show_cols].copy()
+
+search = st.text_input(
+    "Search records",
+    placeholder="Type to search across all columns (ticket #, doctor, CPT, carrier…)",
+    label_visibility="collapsed",
+    key="records_search"
+)
+
+if search:
+    mask = table_df.astype(str).apply(
+        lambda col: col.str.contains(search, case=False, na=False)
+    ).any(axis=1)
+    table_df = table_df[mask]
+
+st.dataframe(table_df.head(500), use_container_width=True, height=330)
 
 st.markdown(
     f"<div style='font-size:11px; color:#94a3b8; text-align:right; margin-top:6px; font-weight:500;'>"
-    f"Showing up to 500 of <b>{len(filtered):,}</b> filtered rows</div>",
+    f"Showing up to 500 of <b>{len(table_df):,}</b> matching rows "
+    f"(of {len(filtered):,} filtered)</div>",
     unsafe_allow_html=True
 )
