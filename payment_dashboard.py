@@ -200,7 +200,7 @@ st.markdown("""
         box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
 
-    #MainMenu, footer, header { visibility: hidden; }
+    footer, header { visibility: hidden; }
     .block-container { padding-top: 1.5rem; padding-bottom: 1rem; }
 </style>
 """, unsafe_allow_html=True)
