@@ -3,11 +3,14 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
+import requests
+import io
+
 
 # ── Page Config ────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Payment Analysis Dashboard",
-    page_icon="⚕",
+    page_icon="💊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -15,285 +18,195 @@ st.set_page_config(
 # ── Custom CSS ─────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
     html, body, [class*="css"] {
-        font-family: 'DM Sans', sans-serif;
+        font-family: 'Plus Jakarta Sans', sans-serif;
     }
 
     /* ── Main background ── */
     .stApp {
-        background: linear-gradient(135deg, #f0f4ff 0%, #f8f9fc 50%, #f0f7f4 100%);
-        background-attachment: fixed;
+        background: #f0f4f8;
     }
 
     /* ── Sidebar ── */
     [data-testid="stSidebar"] {
-        background: #0f172a !important;
-        border-right: none !important;
-        box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+        background: #ffffff !important;
+        border-right: 1px solid #e2e8f0 !important;
+        box-shadow: 2px 0 12px rgba(0,0,0,0.06);
     }
-    [data-testid="stSidebar"] * { color: #94a3b8 !important; }
-    [data-testid="stSidebar"] h1,
-    [data-testid="stSidebar"] h2,
-    [data-testid="stSidebar"] h3 { color: #f1f5f9 !important; }
-
-    [data-testid="stSidebar"] .stMultiSelect > div > div {
-        background: #1e293b !important;
-        border: 1.5px solid #334155 !important;
+    [data-testid="stSidebar"] * { color: #374151 !important; }
+    [data-testid="stSidebar"] .stSelectbox > div > div {
+        background: #f8fafc !important;
+        border: 1.5px solid #e2e8f0 !important;
         border-radius: 10px !important;
-        color: #e2e8f0 !important;
+        color: #1e293b !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
-    [data-testid="stSidebar"] .stMultiSelect span[data-baseweb="tag"] {
-        background: #1d4ed8 !important;
-        border-radius: 6px !important;
-    }
-    [data-testid="stSidebar"] .stTextInput input {
-        background: #1e293b !important;
-        border: 1.5px solid #334155 !important;
-        border-radius: 10px !important;
-        color: #e2e8f0 !important;
-    }
-    [data-testid="stSidebar"] ::-webkit-scrollbar { width: 4px; }
-    [data-testid="stSidebar"] ::-webkit-scrollbar-track { background: #0f172a; }
-    [data-testid="stSidebar"] ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
 
     /* ── KPI Cards ── */
     .metric-card {
         background: #ffffff;
-        border-radius: 20px;
-        padding: 22px 24px 20px 24px;
+        border-radius: 18px;
+        padding: 24px 26px;
         position: relative;
         overflow: hidden;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
-        transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.25s ease;
-        border: 1px solid rgba(255,255,255,0.9);
-        height: 100%;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.05);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border: 1px solid rgba(255,255,255,0.8);
     }
     .metric-card:hover {
-        transform: translateY(-5px) scale(1.01);
-        box-shadow: 0 16px 40px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.06);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 28px rgba(0,0,0,0.12);
     }
     .metric-card::before {
         content: '';
         position: absolute;
         top: 0; left: 0; right: 0;
-        height: 5px;
-        border-radius: 20px 20px 0 0;
+        height: 4px;
+        border-radius: 18px 18px 0 0;
     }
-    .metric-card::after {
-        content: '';
-        position: absolute;
-        bottom: -30px; right: -20px;
-        width: 110px; height: 110px;
-        border-radius: 50%;
-        opacity: 0.05;
-    }
-    .card-blue::before   { background: linear-gradient(90deg, #2563eb, #60a5fa, #38bdf8); }
-    .card-blue::after    { background: #2563eb; }
-    .card-amber::before  { background: linear-gradient(90deg, #d97706, #fbbf24, #fde68a); }
-    .card-amber::after   { background: #d97706; }
-    .card-red::before    { background: linear-gradient(90deg, #dc2626, #f87171, #fca5a5); }
-    .card-red::after     { background: #dc2626; }
-    .card-green::before  { background: linear-gradient(90deg, #059669, #34d399, #6ee7b7); }
-    .card-green::after   { background: #059669; }
-    .card-violet::before { background: linear-gradient(90deg, #7c3aed, #a78bfa, #c4b5fd); }
-    .card-violet::after  { background: #7c3aed; }
+    .card-blue::before   { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .card-amber::before  { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .card-red::before    { background: linear-gradient(90deg, #ef4444, #f87171); }
+    .card-green::before  { background: linear-gradient(90deg, #10b981, #34d399); }
+    .card-violet::before { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
 
     .metric-bg-icon {
         position: absolute;
-        right: 16px;
-        top: 14px;
-        font-size: 36px;
-        opacity: 0.12;
-        line-height: 1;
+        right: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 48px;
+        opacity: 0.07;
     }
     .metric-label {
-        font-size: 9px;
+        font-size: 10px;
         font-weight: 700;
-        letter-spacing: 1.6px;
+        letter-spacing: 1.4px;
         text-transform: uppercase;
         color: #94a3b8;
-        margin-bottom: 10px;
-        font-family: 'Outfit', sans-serif;
+        margin-bottom: 8px;
     }
     .metric-value {
-        font-size: 28px;
+        font-size: 30px;
         font-weight: 800;
         color: #0f172a;
-        font-family: 'DM Mono', monospace;
+        font-family: 'JetBrains Mono', monospace;
         line-height: 1;
-        margin-bottom: 8px;
-        letter-spacing: -0.5px;
-    }
-    .metric-sub {
-        font-size: 11px;
-        color: #64748b;
-        font-weight: 500;
         margin-bottom: 6px;
     }
-    .badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        font-size: 9px;
-        font-weight: 700;
-        padding: 3px 9px;
-        border-radius: 20px;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-        font-family: 'Outfit', sans-serif;
+    .metric-sub {
+        font-size: 12px;
+        color: #64748b;
+        font-weight: 500;
     }
-    .badge-red    { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-    .badge-green  { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
-    .badge-blue   { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
-    .badge-amber  { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
-    .badge-violet { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+    .badge {
+        display: inline-block;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 20px;
+        letter-spacing: 0.4px;
+        margin-top: 6px;
+    }
+    .badge-red   { background: #fee2e2; color: #ef4444; }
+    .badge-green { background: #d1fae5; color: #10b981; }
+    .badge-blue  { background: #dbeafe; color: #3b82f6; }
+    .badge-amber { background: #fef3c7; color: #d97706; }
 
     /* ── Section Headers ── */
     .section-header {
-        font-size: 10px;
+        font-size: 11px;
         font-weight: 700;
-        letter-spacing: 2px;
+        letter-spacing: 1.8px;
         text-transform: uppercase;
-        color: #64748b;
-        margin: 28px 0 12px 0;
+        color: #94a3b8;
+        margin: 32px 0 14px 0;
         display: flex;
         align-items: center;
-        gap: 12px;
-        font-family: 'Outfit', sans-serif;
+        gap: 10px;
     }
     .section-header::before {
         content: '';
-        width: 4px;
-        height: 16px;
-        border-radius: 4px;
-        background: linear-gradient(180deg, #2563eb, #7c3aed);
-        flex-shrink: 0;
+        width: 3px;
+        height: 14px;
+        border-radius: 2px;
+        background: linear-gradient(180deg, #3b82f6, #8b5cf6);
     }
     .section-header::after {
         content: '';
         flex: 1;
         height: 1px;
-        background: linear-gradient(90deg, #e2e8f0 0%, transparent 100%);
+        background: linear-gradient(90deg, #e2e8f0, transparent);
     }
 
     /* ── Page title ── */
     .dash-title {
-        font-size: 26px;
+        font-size: 24px;
         font-weight: 800;
         color: #0f172a;
-        letter-spacing: -0.8px;
-        font-family: 'Outfit', sans-serif;
-        line-height: 1.2;
+        letter-spacing: -0.5px;
     }
     .dash-subtitle {
-        font-size: 12px;
+        font-size: 13px;
         color: #64748b;
-        margin-top: 5px;
+        margin-top: 3px;
         font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .dot-sep {
-        width: 3px; height: 3px;
-        background: #cbd5e1;
-        border-radius: 50%;
-        display: inline-block;
     }
 
     /* ── Chart containers ── */
     .chart-card {
         background: #ffffff;
-        border-radius: 18px;
-        padding: 8px 8px 0 8px;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+        border-radius: 16px;
+        padding: 6px 6px 0 6px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.06);
         border: 1px solid #f1f5f9;
     }
 
     /* ── Sidebar brand ── */
     .sidebar-brand {
-        padding: 24px 0 20px 0;
+        padding: 20px 0 22px 0;
     }
     .brand-logo {
-        font-size: 20px;
+        font-size: 22px;
         font-weight: 800;
-        color: #f1f5f9 !important;
+        color: #0f172a !important;
         letter-spacing: -0.5px;
-        font-family: 'Outfit', sans-serif;
-        display: flex;
-        align-items: center;
-        gap: 8px;
     }
     .brand-tag {
-        font-size: 9px;
+        font-size: 10px;
         font-weight: 600;
-        letter-spacing: 2px;
+        letter-spacing: 1.8px;
         text-transform: uppercase;
-        color: #475569 !important;
-        margin-top: 4px;
-        font-family: 'Outfit', sans-serif;
+        color: #94a3b8 !important;
+        margin-top: 2px;
     }
     .sidebar-label {
-        font-size: 9px;
+        font-size: 10px;
         font-weight: 700;
-        letter-spacing: 1.5px;
+        letter-spacing: 1.2px;
         text-transform: uppercase;
-        color: #475569 !important;
-        margin-bottom: 5px;
-        margin-top: 16px;
-        font-family: 'Outfit', sans-serif;
+        color: #94a3b8 !important;
+        margin-bottom: 4px;
+        margin-top: 14px;
     }
-    .sidebar-divider {
-        border: none;
-        border-top: 1px solid #1e293b;
-        margin: 16px 0;
-    }
-
-    /* ── Stat pills in sidebar ── */
-    .stat-pill {
-        background: #1e293b;
-        border-radius: 10px;
-        padding: 10px 14px;
-        margin-bottom: 8px;
-        border: 1px solid #334155;
-    }
-    .stat-pill-label { font-size: 9px; font-weight: 600; color: #64748b !important; letter-spacing: 1px; text-transform: uppercase; }
-    .stat-pill-value { font-size: 16px; font-weight: 700; color: #e2e8f0 !important; font-family: 'DM Mono', monospace; margin-top: 2px; }
 
     /* ── Dataframe ── */
     [data-testid="stDataFrame"] {
-        border-radius: 16px;
+        border-radius: 14px;
         overflow: hidden;
         border: 1px solid #e2e8f0;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
 
-    /* ── Search input ── */
-    .stTextInput input {
-        border-radius: 12px !important;
-        border: 1.5px solid #e2e8f0 !important;
-        padding: 10px 16px !important;
-        font-family: 'DM Sans', sans-serif !important;
-        font-size: 13px !important;
-        background: #ffffff !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
-    }
-    .stTextInput input:focus {
-        border-color: #2563eb !important;
-        box-shadow: 0 0 0 3px rgba(37,99,235,0.1) !important;
-    }
-
-    /* ── Toolbar & header ── */
     [data-testid="stToolbar"] { display: none !important; }
     header { background: transparent !important; }
 
-    /* ── Sidebar sizing ── */
+    /* Force sidebar always open, hide the close X inside it */
     [data-testid="stSidebar"] {
-        min-width: 252px !important;
-        max-width: 252px !important;
+        min-width: 244px !important;
+        max-width: 244px !important;
         transform: none !important;
         visibility: visible !important;
     }
@@ -302,71 +215,13 @@ st.markdown("""
     [data-testid="baseButton-headerNoPadding"] {
         display: none !important;
     }
-
-    .block-container { padding-top: 1.8rem; padding-bottom: 1.5rem; }
-
-    /* ── Top filter bar ── */
-    .filter-summary-bar {
-        background: #ffffff;
-        border-radius: 14px;
-        padding: 10px 18px;
-        border: 1px solid #f1f5f9;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-wrap: wrap;
-        margin-bottom: 4px;
-    }
-    .filter-chip {
-        background: #eff6ff;
-        border: 1px solid #bfdbfe;
-        border-radius: 20px;
-        padding: 3px 10px;
-        font-size: 10px;
-        font-weight: 600;
-        color: #2563eb;
-        letter-spacing: 0.3px;
-    }
-
-    /* ── Insights banner ── */
-    .insight-banner {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        border-radius: 16px;
-        padding: 16px 22px;
-        margin: 8px 0 4px 0;
-        display: flex;
-        align-items: center;
-        gap: 18px;
-        border: 1px solid #334155;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-    }
-    .insight-icon {
-        font-size: 28px;
-        flex-shrink: 0;
-    }
-    .insight-text {
-        font-size: 12px;
-        color: #94a3b8;
-        line-height: 1.6;
-        font-weight: 400;
-    }
-    .insight-text strong {
-        color: #f1f5f9;
-        font-weight: 700;
-    }
-
-    /* ── Scrollbar ── */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #f8fafc; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; }
-    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .block-container { padding-top: 1.5rem; padding-bottom: 1rem; }
 </style>
 """, unsafe_allow_html=True)
 
 
 # ── Load Data ──────────────────────────────────────────────────────────────
-@st.cache_data(show_spinner=False)
+@st.cache_data
 def load_data():
     file_id = "1VbDVAl9ZQYXe_zpnP_NYMTI7nA2ovUjN"
     try:
@@ -406,103 +261,74 @@ def load_data():
     except Exception as e:
         return None, str(e)
 
-
-with st.spinner("Loading payment data..."):
-    df, error = load_data()
+df, error = load_data()
 
 
-# ── Shared Plotly theme ────────────────────────────────────────────────────
+# ── Shared Plotly theme (LIGHT) ────────────────────────────────────────────
 PLOTLY_BASE = dict(
     paper_bgcolor='rgba(0,0,0,0)',
     plot_bgcolor='rgba(0,0,0,0)',
-    font=dict(family='DM Sans', color='#64748b', size=11),
-    margin=dict(l=14, r=14, t=42, b=14),
-    xaxis=dict(
-        gridcolor='#f1f5f9', zeroline=False,
-        tickfont=dict(color='#94a3b8', size=10),
-        linecolor='#e2e8f0', showline=True
-    ),
-    yaxis=dict(
-        gridcolor='#f1f5f9', zeroline=False,
-        tickfont=dict(color='#94a3b8', size=10),
-        linecolor='#e2e8f0', showline=False
-    ),
+    font=dict(family='Plus Jakarta Sans', color='#64748b', size=11),
+    margin=dict(l=12, r=12, t=38, b=12),
+    xaxis=dict(gridcolor='#f1f5f9', zeroline=False, tickfont=dict(color='#94a3b8', size=10), linecolor='#e2e8f0'),
+    yaxis=dict(gridcolor='#f1f5f9', zeroline=False, tickfont=dict(color='#94a3b8', size=10), linecolor='#e2e8f0'),
 )
-LEGEND = dict(
-    bgcolor='rgba(255,255,255,0.8)',
-    font=dict(color='#64748b', size=10),
-    borderwidth=1,
-    bordercolor='#f1f5f9',
-    orientation='h',
-    yanchor='bottom', y=1.02,
-    xanchor='right', x=1
-)
-TITLE_FONT = dict(color='#1e293b', size=12, family='Outfit')
+LEGEND = dict(bgcolor='rgba(0,0,0,0)', font=dict(color='#64748b', size=11), borderwidth=0)
+TITLE_FONT = dict(color='#1e293b', size=13, family='Plus Jakarta Sans')
 
-PALETTE = ['#2563eb', '#dc2626', '#7c3aed', '#d97706', '#059669', '#db2777', '#0891b2', '#ea580c']
-PALETTE_BLUE = ['#1e3a8a', '#1d4ed8', '#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe']
-
+PALETTE = ['#3b82f6','#ef4444','#8b5cf6','#f59e0b','#10b981','#ec4899','#06b6d4','#f97316']
+PALETTE_BLUE = ['#1d4ed8','#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe','#dbeafe','#eff6ff']
 
 # ── Sidebar ────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("""
         <div class='sidebar-brand'>
             <div class='brand-logo'>⚕ Jorie AI</div>
-            <div class='brand-tag'>Payment Analytics · ONE AR</div>
+            <div class='brand-tag'>Payment Analytics</div>
         </div>
-        <hr class='sidebar-divider'>
+        <hr style='border:none; border-top:1.5px solid #f1f5f9; margin-bottom:18px;'>
     """, unsafe_allow_html=True)
 
     if df is not None:
-        # Dynamic filter options
-        year_options     = sorted(df['Year'].dropna().unique().astype(int).tolist(), reverse=True)
-        _month_dates     = df['Date_Of_Entry'].dropna().dt.to_period('M').drop_duplicates()
-        month_options    = [p.strftime('%b-%y') for p in sorted(_month_dates, reverse=True)]
-        carrier_options  = sorted(df['Insurance_Carrier'].dropna().unique().tolist()) if 'Insurance_Carrier' in df.columns else []
-        variance_options = sorted(df['Variance'].dropna().unique().tolist())           if 'Variance'          in df.columns else []
-        fc_options       = sorted(df['Update_FC'].dropna().unique().tolist())          if 'Update_FC'         in df.columns else []
-        cpt_options      = sorted(df['CPT_Category'].dropna().unique().tolist())       if 'CPT_Category'      in df.columns else []
-        code_options     = sorted(df['code'].dropna().astype(str).unique().tolist())   if 'code'              in df.columns else []
+        # Year options
+        year_options = ['All'] + sorted(df['Year'].dropna().unique().astype(int).tolist(), reverse=True)
 
-        st.markdown("<div class='sidebar-label'>📅 Year</div>", unsafe_allow_html=True)
-        selected_year = st.multiselect("Year", year_options, default=[], key="year",
-                                       placeholder="All years", label_visibility="collapsed")
+        # Month options sorted chronologically newest first
+        _month_dates  = df['Date_Of_Entry'].dropna().dt.to_period('M').drop_duplicates()
+        month_options = ['All'] + [p.strftime('%b-%y') for p in sorted(_month_dates, reverse=True)]
 
-        st.markdown("<div class='sidebar-label'>🗓 Month</div>", unsafe_allow_html=True)
-        selected_month = st.multiselect("Month", month_options, default=[], key="month",
-                                        placeholder="All months", label_visibility="collapsed")
+        carrier_options  = ['All'] + sorted(df['Insurance_Carrier'].dropna().unique().tolist()) if 'Insurance_Carrier' in df.columns else ['All']
+        variance_options = ['All'] + sorted(df['Variance'].dropna().unique().tolist())           if 'Variance'          in df.columns else ['All']
+        fc_options       = ['All'] + sorted(df['Update_FC'].dropna().unique().tolist())          if 'Update_FC'         in df.columns else ['All']
+        cpt_options      = ['All'] + sorted(df['CPT_Category'].dropna().unique().tolist())       if 'CPT_Category'      in df.columns else ['All']
 
-        st.markdown("<div class='sidebar-label'>🏥 Insurance Carrier</div>", unsafe_allow_html=True)
-        selected_carrier = st.multiselect("Carrier", carrier_options, default=[], key="carrier",
-                                          placeholder="All carriers", label_visibility="collapsed")
+        st.markdown("<div class='sidebar-label'>Year</div>", unsafe_allow_html=True)
+        selected_year = st.multiselect("Year", year_options[1:], default=[], key="year", placeholder="All", label_visibility="collapsed")
 
-        st.markdown("<div class='sidebar-label'>⚡ Variance Status</div>", unsafe_allow_html=True)
-        selected_variance = st.multiselect("Variance", variance_options, default=[], key="variance",
-                                           placeholder="All statuses", label_visibility="collapsed")
+        st.markdown("<div class='sidebar-label'>Month</div>", unsafe_allow_html=True)
+        selected_month = st.multiselect("Month", month_options[1:], default=[], key="month", placeholder="All", label_visibility="collapsed")
 
-        st.markdown("<div class='sidebar-label'>💼 Financial Class</div>", unsafe_allow_html=True)
-        selected_fc = st.multiselect("Financial Class", fc_options, default=[], key="fc",
-                                     placeholder="All classes", label_visibility="collapsed")
+        st.markdown("<div class='sidebar-label'>Insurance Carrier</div>", unsafe_allow_html=True)
+        selected_carrier = st.multiselect("Carrier", carrier_options[1:], default=[], key="carrier", placeholder="All", label_visibility="collapsed")
 
-        st.markdown("<div class='sidebar-label'>🏷 CPT Category</div>", unsafe_allow_html=True)
-        selected_cpt = st.multiselect("CPT Category", cpt_options, default=[], key="cpt",
-                                      placeholder="All categories", label_visibility="collapsed")
+        st.markdown("<div class='sidebar-label'>Variance Status</div>", unsafe_allow_html=True)
+        selected_variance = st.multiselect("Variance", variance_options[1:], default=[], key="variance", placeholder="All", label_visibility="collapsed")
 
-        st.markdown("<div class='sidebar-label'>🔢 CPT Code</div>", unsafe_allow_html=True)
-        selected_code = st.multiselect("CPT Code", code_options, default=[], key="cpt_code",
-                                       placeholder="All codes", label_visibility="collapsed")
+        st.markdown("<div class='sidebar-label'>Financial Class</div>", unsafe_allow_html=True)
+        selected_fc = st.multiselect("Financial Class", fc_options[1:], default=[], key="fc", placeholder="All", label_visibility="collapsed")
+
+        st.markdown("<div class='sidebar-label'>CPT Category</div>", unsafe_allow_html=True)
+        selected_cpt = st.multiselect("CPT Category", cpt_options[1:], default=[], key="cpt", placeholder="All", label_visibility="collapsed")
+
+        code_options = sorted(df['code'].dropna().astype(str).unique().tolist()) if 'code' in df.columns else []
+        st.markdown("<div class='sidebar-label'>CPT Code</div>", unsafe_allow_html=True)
+        selected_code = st.multiselect("CPT Code", code_options, default=[], key="cpt_code", placeholder="All", label_visibility="collapsed")
 
     else:
-        selected_year = selected_month = selected_carrier = []
-        selected_variance = selected_fc = selected_cpt = selected_code = []
+        selected_year = selected_month = selected_carrier = selected_variance = selected_fc = selected_cpt = selected_code = 'All'
 
-    st.markdown("<hr class='sidebar-divider'>", unsafe_allow_html=True)
-    st.markdown("""
-        <div style='font-size:9px; color:#334155; text-align:center; padding:4px 0 8px 0;
-                    font-weight:600; letter-spacing:1.2px; text-transform:uppercase; font-family:Outfit,sans-serif;'>
-            ONE AR · Jorie AI · Contract Intelligence
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<hr style='border:none; border-top:1.5px solid #f1f5f9; margin-top:28px;'>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size:10px; color:#cbd5e1; text-align:center; padding-top:8px; font-weight:600; letter-spacing:0.8px;'>ONE AR · JORIE AI</div>", unsafe_allow_html=True)
 
 
 # ── Error / No Data fallback ───────────────────────────────────────────────
@@ -539,39 +365,38 @@ over_mask  = filtered['Total_Payment'] > filtered['Allowed_Contract_Num']
 match_mask = filtered['Total_Payment'] == filtered['Allowed_Contract_Num']
 
 total_procedures    = len(filtered)
-under_payment_count = int(under_mask.sum())
-over_payment_count  = int(over_mask.sum())
+under_payment_count = under_mask.sum()
+over_payment_count  = over_mask.sum()
 
 # KPI cards — Mapped Contract rows where available, else all filtered rows
-mapped_mask = (filtered['Categories'] == 'Mapped Contract') if 'Categories' in filtered.columns else pd.Series([True] * len(filtered), index=filtered.index)
-mapped_df   = filtered[mapped_mask] if mapped_mask.sum() > 0 else filtered.copy()
+mapped_mask    = filtered['Categories'] == 'Mapped Contract'
+mapped_df      = filtered[mapped_mask] if mapped_mask.sum() > 0 else filtered
 
 mapped_under   = mapped_df[mapped_df['Total_Payment'] < mapped_df['Allowed_Contract_Num']]
 mapped_over    = mapped_df[mapped_df['Total_Payment'] > mapped_df['Allowed_Contract_Num']]
 mapped_allowed = mapped_df['Allowed_Contract_Num'].sum()
 mapped_actual  = mapped_df['Total_Payment'].sum()
 
-under_payment_amt  = float((mapped_under['Allowed_Contract_Num'] - mapped_under['Total_Payment']).sum())
-over_payment_amt   = float((mapped_over['Total_Payment'] - mapped_over['Allowed_Contract_Num']).sum())
+under_payment_amt  = (mapped_under['Allowed_Contract_Num'] - mapped_under['Total_Payment']).sum()
+over_payment_amt   = (mapped_over['Total_Payment'] - mapped_over['Allowed_Contract_Num']).sum()
 
-pct_under          = (under_payment_count / total_procedures * 100)   if total_procedures > 0 else 0.0
-under_pct_of_total = (under_payment_amt  / mapped_allowed   * 100)    if mapped_allowed   > 0 else 0.0
-recovery_rate      = (mapped_actual      / mapped_allowed   * 100)    if mapped_allowed   > 0 else 0.0
+pct_under          = (under_payment_amt / mapped_allowed * 100) if mapped_allowed > 0 else 0
+under_pct_of_total = (under_payment_amt / mapped_allowed * 100) if mapped_allowed > 0 else 0
+recovery_rate      = (mapped_actual / mapped_allowed * 100) if mapped_allowed > 0 else 0
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ── Header
 # ═══════════════════════════════════════════════════════════════════════════
 col_title, col_logo = st.columns([10, 1])
-
 with col_logo:
     st.markdown("""
-        <div style='display:flex; justify-content:flex-end; align-items:flex-start; padding-top:4px;'>
-            <a href='https://github.com/kunalvaish49-cpu/VisualCode_UB-04' target='_blank'
+        <div style='display:flex; justify-content:flex-end; align-items:center; padding-top:6px;'>
+            <a href='https://github.com/kunalvaish49-cpu/VisualCode_UB-04' target='_blank' 
                style='text-decoration:none;'>
                 <img src='https://raw.githubusercontent.com/kunalvaish49-cpu/VisualCode_UB-04/20be2ac615bd0074353bf7f7b9784af81e6cc040/Jorie%20AI%20Image.webp'
-                     style='height:80px; width:auto; border-radius:12px;
-                            box-shadow:0 4px 16px rgba(0,0,0,0.14); object-fit:cover;'
+                     style='height:96px; width:auto; border-radius:10px; 
+                            box-shadow:0 2px 10px rgba(0,0,0,0.12);'
                      title='Jorie AI — GitHub'
                 />
             </a>
@@ -588,81 +413,23 @@ with col_title:
         len(selected_cpt)      > 0,
         len(selected_code)     > 0,
     ])
-
-    filter_chips = ""
-    if selected_year:
-        filter_chips += f"<span class='filter-chip'>📅 {', '.join(str(y) for y in selected_year)}</span> "
-    if selected_carrier:
-        n = len(selected_carrier)
-        filter_chips += f"<span class='filter-chip'>🏥 {selected_carrier[0]}{f' +{n-1}' if n > 1 else ''}</span> "
-    if selected_fc:
-        n = len(selected_fc)
-        filter_chips += f"<span class='filter-chip'>💼 {selected_fc[0]}{f' +{n-1}' if n > 1 else ''}</span> "
-    if selected_cpt:
-        n = len(selected_cpt)
-        filter_chips += f"<span class='filter-chip'>🏷 {selected_cpt[0]}{f' +{n-1}' if n > 1 else ''}</span> "
-
-    filter_badge = (f"<span class='badge badge-blue' style='margin-left:8px;'>"
-                    f"{active_filters} filter{'s' if active_filters != 1 else ''} active</span>"
-                    if active_filters else "")
-
+    filter_badge = f"<span class='badge badge-blue'>{active_filters} filter{'s' if active_filters!=1 else ''} active</span>" if active_filters else ""
     st.markdown(f"""
-        <div class='dash-title'>
-            Payment Analysis &nbsp;·&nbsp; Under &amp; Over Payment Overview
-            {filter_badge}
-        </div>
-        <div class='dash-subtitle'>
-            <span>ONE AR</span>
-            <span class='dot-sep'></span>
-            <span>Contract Rate Variance Intelligence</span>
-            <span class='dot-sep'></span>
-            <strong style='color:#0f172a; font-weight:700;'>{total_procedures:,}</strong>
-            <span>procedures in view</span>
-        </div>
-    """, unsafe_allow_html=True)
-
-    if filter_chips:
-        st.markdown(f"""
-            <div class='filter-summary-bar' style='margin-top:8px;'>
-                <span style='font-size:10px; color:#94a3b8; font-weight:600; text-transform:uppercase;
-                             letter-spacing:1px; flex-shrink:0;'>Active Filters:</span>
-                {filter_chips}
-            </div>
-        """, unsafe_allow_html=True)
-
-st.markdown("<div style='margin-top:6px;'></div>", unsafe_allow_html=True)
-
-# ── Smart Insight Banner ─────────────────────────────────────────────────
-if total_procedures > 0:
-    insight_pct = pct_under
-    risk_str = f"${under_payment_amt/1e6:.2f}M" if under_payment_amt >= 1e6 else f"${under_payment_amt/1e3:.0f}K"
-    rec_str  = f"{recovery_rate:.1f}%"
-    insight_icon = "⚠️" if pct_under > 30 else ("✅" if recovery_rate > 90 else "📊")
-    st.markdown(f"""
-        <div class='insight-banner'>
-            <div class='insight-icon'>{insight_icon}</div>
-            <div class='insight-text'>
-                <strong>{insight_pct:.1f}%</strong> of procedures ({under_payment_count:,} claims) are under-paid,
-                representing <strong>{risk_str}</strong> in revenue at risk.
-                Current collection rate is <strong>{rec_str}</strong> of contracted allowable.
-                &nbsp;·&nbsp; Over-payment exposure: <strong>${over_payment_amt/1e3:.0f}K</strong>
-                across <strong>{len(mapped_over):,}</strong> claims.
-            </div>
-        </div>
+        <div class='dash-title'>Payment Analysis &nbsp;·&nbsp; Under &amp; Over Payment Overview &nbsp;{filter_badge}</div>
+        <div class='dash-subtitle'>ONE AR &nbsp;·&nbsp; Contract Rate Variance Intelligence &nbsp;·&nbsp; {total_procedures:,} procedures in view</div>
     """, unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ── KPI Cards (5 cards)
 # ═══════════════════════════════════════════════════════════════════════════
-st.markdown("<div style='margin-top:14px;'></div>", unsafe_allow_html=True)
 c1, c2, c3, c4, c5 = st.columns(5)
 
 with c1:
     st.markdown(f"""
     <div class='metric-card card-blue'>
         <div class='metric-bg-icon'>💰</div>
-        <div class='metric-label'>Total Payment Received</div>
+        <div class='metric-label'>Total Payment</div>
         <div class='metric-value'>${total_payment/1e6:.2f}M</div>
         <div class='metric-sub'>{total_procedures:,} total procedures</div>
         <span class='badge badge-blue'>Allowed ${allowed_total/1e6:.2f}M</span>
@@ -682,9 +449,9 @@ with c3:
     st.markdown(f"""
     <div class='metric-card card-red'>
         <div class='metric-bg-icon'>📉</div>
-        <div class='metric-label'>Under Payment Amount</div>
+        <div class='metric-label'>Under Payment $</div>
         <div class='metric-value'>${under_payment_amt/1e6:.2f}M</div>
-        <div class='metric-sub'>{under_pct_of_total:.1f}% of contracted allowed</div>
+        <div class='metric-sub'>{under_pct_of_total:.1f}% of total payment</div>
         <span class='badge badge-red'>Revenue at risk</span>
     </div>""", unsafe_allow_html=True)
 
@@ -692,24 +459,23 @@ with c4:
     st.markdown(f"""
     <div class='metric-card card-green'>
         <div class='metric-bg-icon'>📈</div>
-        <div class='metric-label'>Over Payment Amount</div>
+        <div class='metric-label'>Over Payment $</div>
         <div class='metric-value'>${over_payment_amt/1e6:.2f}M</div>
         <div class='metric-sub'>{len(mapped_over):,} over-paid claims</div>
-        <span class='badge badge-green'>Refund exposure</span>
+        <span class='badge badge-green'>Potential refund exposure</span>
     </div>""", unsafe_allow_html=True)
 
 with c5:
-    rate_badge = 'badge-green' if recovery_rate >= 90 else ('badge-amber' if recovery_rate >= 75 else 'badge-red')
     st.markdown(f"""
     <div class='metric-card card-violet'>
         <div class='metric-bg-icon'>🎯</div>
         <div class='metric-label'>Collection Rate</div>
         <div class='metric-value'>{recovery_rate:.1f}%</div>
         <div class='metric-sub'>Actual vs contract allowed</div>
-        <span class='badge {rate_badge}'>Contract utilization</span>
+        <span class='badge badge-blue'>Contract utilization</span>
     </div>""", unsafe_allow_html=True)
 
-st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -717,6 +483,7 @@ st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
 # ═══════════════════════════════════════════════════════════════════════════
 st.markdown("<div class='section-header'>Financial Overview</div>", unsafe_allow_html=True)
 col_line, col_trend = st.columns([3, 2])
+
 
 with col_line:
     if 'Update_FC' in filtered.columns:
@@ -726,7 +493,7 @@ with col_line:
                 Allowed=('Allowed_Contract_Num', 'sum')
             ).reset_index().sort_values('Actual', ascending=False).head(8)
             x_col = 'Insurance_Carrier'
-            chart_title = f'Actual vs Allowed — by Carrier ({", ".join(str(s) for s in selected_fc)})'
+            chart_title = f'Actual vs Allowed — by Carrier ({selected_fc})'
         else:
             fc_grp = filtered.groupby('Update_FC').agg(
                 Actual=('Total_Payment', 'sum'),
@@ -737,24 +504,22 @@ with col_line:
 
         fig = go.Figure()
         fig.add_trace(go.Scatter(
-            x=fc_grp[x_col], y=fc_grp['Actual'] / 1e6,
-            mode='lines+markers' if len(fc_grp) > 1 else 'markers',
-            name='Actual Payment',
-            line=dict(color='#2563eb', width=3),
-            marker=dict(size=9, color='#2563eb', line=dict(color='#1e40af', width=2)),
-            fill='tozeroy', fillcolor='rgba(37,99,235,0.07)'
+            x=fc_grp[x_col], y=fc_grp['Actual']/1e6,
+            mode='lines+markers' if len(fc_grp) > 1 else 'markers', name='Actual Payment',
+            line=dict(color='#3b82f6', width=3),
+            marker=dict(size=9, color='#3b82f6', line=dict(color='#1d4ed8', width=2)),
+            fill='tozeroy', fillcolor='rgba(59,130,246,0.06)'
         ))
         fig.add_trace(go.Scatter(
-            x=fc_grp[x_col], y=fc_grp['Allowed'] / 1e6,
-            mode='lines+markers' if len(fc_grp) > 1 else 'markers',
-            name='Contract Allowed',
-            line=dict(color='#d97706', width=2.5, dash='dot'),
-            marker=dict(size=7, color='#d97706', symbol='diamond')
+            x=fc_grp[x_col], y=fc_grp['Allowed']/1e6,
+            mode='lines+markers' if len(fc_grp) > 1 else 'markers', name='Contract Allowed',
+            line=dict(color='#f59e0b', width=2.5, dash='dot'),
+            marker=dict(size=7, color='#f59e0b')
         ))
         fig.update_layout(**PLOTLY_BASE,
             legend=LEGEND,
             title=dict(text=chart_title, font=TITLE_FONT),
-            yaxis_tickprefix='$', yaxis_ticksuffix='M', height=300
+            yaxis_tickprefix='$', yaxis_ticksuffix='M', height=290
         )
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
@@ -767,24 +532,16 @@ with col_trend:
     monthly = monthly.sort_values('_sort').tail(12)
 
     fig2 = go.Figure()
-    fig2.add_trace(go.Bar(
-        x=monthly['Month_Label'], y=monthly['Actual'] / 1e3,
-        name='Actual', marker_color='#2563eb', opacity=0.9, marker_line_width=0,
-        hovertemplate='<b>%{x}</b><br>Actual: $%{y:,.1f}K<extra></extra>'
-    ))
-    fig2.add_trace(go.Bar(
-        x=monthly['Month_Label'], y=monthly['Allowed'] / 1e3,
-        name='Allowed', marker_color='#bfdbfe', opacity=0.9, marker_line_width=0,
-        hovertemplate='<b>%{x}</b><br>Allowed: $%{y:,.1f}K<extra></extra>'
-    ))
+    fig2.add_trace(go.Bar(x=monthly['Month_Label'], y=monthly['Actual']/1e3,  name='Actual',  marker_color='#3b82f6', opacity=0.9, marker_line_width=0))
+    fig2.add_trace(go.Bar(x=monthly['Month_Label'], y=monthly['Allowed']/1e3, name='Allowed', marker_color='#bfdbfe', opacity=0.9, marker_line_width=0))
     fig2.update_layout(**PLOTLY_BASE,
         legend=LEGEND,
         title=dict(text='Monthly Payment Trend ($K)', font=TITLE_FONT),
-        barmode='group', height=300,
+        barmode='group', height=290,
         yaxis_tickprefix='$', yaxis_ticksuffix='K',
         bargap=0.25, bargroupgap=0.08
     )
-    st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
+    st.plotly_chart(fig2, width='stretch', config={'displayModeBar': False})
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -798,37 +555,33 @@ with col_pie:
         _uf = filtered[under_mask].copy()
         _uf['_gap'] = _uf['Allowed_Contract_Num'] - _uf['Total_Payment']
         under_carrier = _uf.groupby('Insurance_Carrier').agg(
-            Under_Amt=('_gap', 'sum'),
-            Claims=('Total_Payment', 'count')
+            Under_Amt=('Allowed_Contract_Num', 'sum'),
+            Claims=('Total_Payment', 'count'),
+            Gap=('_gap', 'sum')
         ).reset_index()
         under_carrier = under_carrier.sort_values('Under_Amt', ascending=False).head(6)
-        total_u = _uf['_gap'].sum()
+        total_u = (filtered.loc[under_mask, 'Allowed_Contract_Num'] - filtered.loc[under_mask, 'Total_Payment']).sum()
 
         fig3 = go.Figure(go.Pie(
             labels=under_carrier['Insurance_Carrier'],
             values=under_carrier['Under_Amt'],
-            hole=0.60,
+            hole=0.58,
             marker=dict(colors=PALETTE, line=dict(color='#ffffff', width=3)),
             textinfo='percent',
-            textfont=dict(size=10, family='DM Sans'),
-            hovertemplate='<b>%{label}</b><br>Gap: $%{value:,.0f}<br>Share: %{percent}<extra></extra>',
-            pull=[0.04, 0, 0, 0, 0, 0]
+            textfont=dict(size=11),
+            hovertemplate='<b>%{label}</b><br>Amount: $%{value:,.0f}<br>Share: %{percent}<extra></extra>'
         ))
-        ann_val = f"${total_u/1e6:.2f}M" if total_u >= 1e6 else f"${total_u/1e3:.0f}K"
         fig3.add_annotation(
-            text=f'{ann_val}<br><span style="font-size:9px;color:#94a3b8">total gap</span>',
+            text=f'${total_u/1e3:.0f}K<br><span style="font-size:10px;color:#94a3b8">Gap</span>',
             x=0.5, y=0.5, showarrow=False,
-            font=dict(size=13, color='#0f172a', family='DM Mono')
+            font=dict(size=13, color='#0f172a', family='JetBrains Mono')
         )
         fig3.update_layout(**PLOTLY_BASE,
             title=dict(text='Under Payment — Top Carriers', font=TITLE_FONT),
-            height=320, showlegend=True,
-            legend=dict(
-                bgcolor='rgba(0,0,0,0)', font=dict(color='#64748b', size=9),
-                orientation='v', x=1.01, y=0.5, xanchor='left'
-            )
+            height=310, showlegend=True,
+            legend=dict(bgcolor='rgba(0,0,0,0)', font=dict(color='#64748b', size=10), orientation='v', x=1, y=0.5)
         )
-        st.plotly_chart(fig3, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig3, width='stretch', config={'displayModeBar': False})
 
 with col_proc:
     if 'code' in filtered.columns:
@@ -840,72 +593,87 @@ with col_proc:
         proc_under = proc_under[proc_under['Under_Gap'] > 0]
         proc_under = proc_under.sort_values('Under_Gap', ascending=True).tail(8)
 
-        bar_colors = [f'rgba(37,99,235,{0.4 + 0.6 * i / max(len(proc_under) - 1, 1)})' for i in range(len(proc_under))]
-
         fig_proc = go.Figure(go.Bar(
-            x=proc_under['Under_Gap'] / 1e3,
+            x=proc_under['Under_Gap']/1e3,
             y=proc_under['code'].astype(str),
             orientation='h',
-            marker=dict(color=bar_colors, line=dict(width=0)),
-            text=[f'${v / 1e3:.1f}K' for v in proc_under['Under_Gap']],
+            marker=dict(
+                color=proc_under['Under_Gap'],
+                colorscale=[[0,'#dbeafe'],[0.5,'#60a5fa'],[1,'#1d4ed8']],
+                showscale=False,
+                line=dict(width=0)
+            ),
+            text=[f'${v/1e3:.1f}K' for v in proc_under['Under_Gap']],
             textposition='outside',
-            textfont=dict(color='#64748b', size=10),
-            hovertemplate='CPT <b>%{y}</b><br>Gap: $%{x:,.1f}K<extra></extra>'
+            textfont=dict(color='#64748b', size=10)
         ))
         fig_proc.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(family='DM Sans', color='#64748b', size=11),
-            margin=dict(l=14, r=64, t=42, b=14),
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(family='Plus Jakarta Sans', color='#64748b', size=11),
+            margin=dict(l=12, r=60, t=38, b=12),
             title=dict(text='Under Payment Gap — Top Procedures', font=TITLE_FONT),
-            height=320,
+            height=310,
             xaxis=dict(
-                gridcolor='#f1f5f9', zeroline=False, tickfont=dict(color='#94a3b8', size=10),
-                linecolor='#e2e8f0', tickprefix='$', ticksuffix='K', showline=True
+                gridcolor='#f1f5f9', zeroline=False,
+                tickfont=dict(color='#94a3b8', size=10),
+                linecolor='#e2e8f0',
+                tickprefix='$', ticksuffix='K'
             ),
             yaxis=dict(
-                gridcolor='#f1f5f9', zeroline=False, tickfont=dict(color='#334155', size=10),
-                linecolor='#e2e8f0', type='category', showline=False
+                gridcolor='#f1f5f9', zeroline=False,
+                tickfont=dict(color='#94a3b8', size=10),
+                linecolor='#e2e8f0',
+                type='category'
             ),
         )
-        st.plotly_chart(fig_proc, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig_proc, width='stretch', config={'displayModeBar': False})
 
 with col_prov:
     if 'Doctor' in filtered.columns:
+        # Use only Mapped Contract rows — same as KPIs
         _prov = filtered[mapped_mask & under_mask].copy() if mapped_mask.sum() > 0 else filtered[under_mask].copy()
         _prov['_gap'] = (_prov['Allowed_Contract_Num'] - _prov['Total_Payment']).clip(lower=0)
         prov_under = _prov.groupby('Doctor').agg(Under_Gap=('_gap', 'sum')).reset_index()
         prov_under = prov_under[prov_under['Under_Gap'] > 0]
         prov_under = prov_under.sort_values('Under_Gap', ascending=True).tail(8)
-        prov_under['label'] = prov_under['Doctor'].str[:24]
-
-        amber_colors = [f'rgba(217,119,6,{0.35 + 0.65 * i / max(len(prov_under) - 1, 1)})' for i in range(len(prov_under))]
+        prov_under['label'] = prov_under['Doctor'].str[:22]
 
         fig_prov = go.Figure(go.Bar(
-            x=prov_under['Under_Gap'] / 1e3,
+            x=prov_under['Under_Gap']/1e3,
             y=prov_under['label'],
             orientation='h',
-            marker=dict(color=amber_colors, line=dict(width=0)),
-            text=[f'${v / 1e3:.1f}K' for v in prov_under['Under_Gap']],
+            marker=dict(
+                color=prov_under['Under_Gap'],
+                colorscale=[[0,'#fef3c7'],[0.5,'#fbbf24'],[1,'#d97706']],
+                showscale=False,
+                line=dict(width=0)
+            ),
+            text=[f'${v/1e3:.1f}K' for v in prov_under['Under_Gap']],
             textposition='outside',
-            textfont=dict(color='#64748b', size=10),
-            hovertemplate='<b>%{y}</b><br>Gap: $%{x:,.1f}K<extra></extra>'
+            textfont=dict(color='#64748b', size=10)
         ))
         fig_prov.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(family='DM Sans', color='#64748b', size=11),
-            margin=dict(l=14, r=64, t=42, b=14),
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(family='Plus Jakarta Sans', color='#64748b', size=11),
+            margin=dict(l=12, r=60, t=38, b=12),
             title=dict(text='Under Payment Gap — Top Providers', font=TITLE_FONT),
-            height=320,
+            height=310,
             xaxis=dict(
-                gridcolor='#f1f5f9', zeroline=False, tickfont=dict(color='#94a3b8', size=10),
-                linecolor='#e2e8f0', tickprefix='$', ticksuffix='K', showline=True
+                gridcolor='#f1f5f9', zeroline=False,
+                tickfont=dict(color='#94a3b8', size=10),
+                linecolor='#e2e8f0',
+                tickprefix='$', ticksuffix='K'
             ),
             yaxis=dict(
-                gridcolor='#f1f5f9', zeroline=False, tickfont=dict(color='#334155', size=10),
-                linecolor='#e2e8f0', type='category', showline=False
+                gridcolor='#f1f5f9', zeroline=False,
+                tickfont=dict(color='#94a3b8', size=10),
+                linecolor='#e2e8f0',
+                type='category'
             ),
         )
-        st.plotly_chart(fig_prov, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig_prov, width='stretch', config={'displayModeBar': False})
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -920,85 +688,74 @@ with col_cat:
         _cat['_gap'] = _cat['Allowed_Contract_Num'] - _cat['Total_Payment']
         cat_grp = _cat.groupby('CPT_Category').agg(Under_Gap=('_gap', 'sum')).reset_index()
         cat_grp = cat_grp.sort_values('Under_Gap', ascending=True).tail(5)
-        cat_grp['label'] = cat_grp['CPT_Category'].str[:24]
-
-        pink_colors = [f'rgba(219,39,119,{0.35 + 0.65 * i / max(len(cat_grp) - 1, 1)})' for i in range(len(cat_grp))]
+        cat_grp['label'] = cat_grp['CPT_Category'].str[:22]
 
         fig5 = go.Figure(go.Bar(
-            x=cat_grp['Under_Gap'] / 1e3,
+            x=cat_grp['Under_Gap']/1e3,
             y=cat_grp['label'],
             orientation='h',
-            marker=dict(color=pink_colors, line=dict(width=0)),
-            text=[f'${v / 1e3:.1f}K' for v in cat_grp['Under_Gap']],
+            marker=dict(
+                color=cat_grp['Under_Gap'],
+                colorscale=[[0,'#fce7f3'],[0.5,'#f472b6'],[1,'#db2777']],
+                showscale=False,
+                line=dict(width=0)
+            ),
+            text=[f'${v/1e3:.1f}K' for v in cat_grp['Under_Gap']],
             textposition='outside',
-            textfont=dict(color='#64748b', size=10),
-            hovertemplate='<b>%{y}</b><br>Gap: $%{x:,.1f}K<extra></extra>'
+            textfont=dict(color='#64748b', size=10)
         ))
         fig5.update_layout(**PLOTLY_BASE,
             title=dict(text='Under Payment — Top 5 CPT Categories', font=TITLE_FONT),
-            height=310,
+            height=300,
             xaxis_tickprefix='$', xaxis_ticksuffix='K',
-            margin=dict(l=14, r=64, t=42, b=14),
         )
-        st.plotly_chart(fig5, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig5, width='stretch', config={'displayModeBar': False})
 
 with col_cpt:
     if 'code' in filtered.columns:
         _cpt_filtered = filtered.copy()
         _cpt_filtered['code'] = _cpt_filtered['code'].astype(str).str.strip().str.replace(r'\.0$', '', regex=True)
-        _cpt_filtered = _cpt_filtered[
-            _cpt_filtered['code'].notna() &
-            (_cpt_filtered['code'] != '') &
-            (_cpt_filtered['code'] != 'nan')
-        ]
+        _cpt_filtered = _cpt_filtered[_cpt_filtered['code'].notna() & (_cpt_filtered['code'] != '') & (_cpt_filtered['code'] != 'nan')]
         cpt_grp = _cpt_filtered.groupby('code').agg(
             Actual=('Total_Payment', 'sum'),
             Allowed=('Allowed_Contract_Num', 'sum')
         ).reset_index().sort_values('Allowed', ascending=False).head(10)
-        cpt_labels = cpt_grp['code'].tolist()
+        cpt_grp['code_str'] = cpt_grp['code']
+        cpt_grp['Gap']      = (cpt_grp['Allowed'] - cpt_grp['Actual']).clip(lower=0)
+
+        cpt_labels = cpt_grp['code_str'].tolist()
 
         fig_cpt = go.Figure()
         fig_cpt.add_trace(go.Bar(
             name='Actual Payment',
-            x=cpt_labels, y=cpt_grp['Actual'] / 1e3,
-            marker_color='#2563eb', opacity=0.9, marker_line_width=0,
-            hovertemplate='CPT <b>%{x}</b><br>Actual: $%{y:,.1f}K<extra></extra>'
+            x=cpt_labels, y=cpt_grp['Actual']/1e3,
+            marker_color='#3b82f6', opacity=0.9, marker_line_width=0
         ))
         fig_cpt.add_trace(go.Bar(
             name='Contract Allowed',
-            x=cpt_labels, y=cpt_grp['Allowed'] / 1e3,
-            marker_color='#bfdbfe', opacity=0.9, marker_line_width=0,
-            hovertemplate='CPT <b>%{x}</b><br>Allowed: $%{y:,.1f}K<extra></extra>'
+            x=cpt_labels, y=cpt_grp['Allowed']/1e3,
+            marker_color='#bfdbfe', opacity=0.9, marker_line_width=0
         ))
         fig_cpt.update_layout(**PLOTLY_BASE,
             legend=LEGEND,
             title=dict(text='Top 10 CPT Codes — Actual vs Contract Allowed ($K)', font=TITLE_FONT),
-            barmode='group', height=310,
+            barmode='group', height=300,
             yaxis_tickprefix='$', yaxis_ticksuffix='K',
             bargap=0.22, bargroupgap=0.06,
             xaxis_type='category',
             xaxis_tickangle=-35,
         )
-        st.plotly_chart(fig_cpt, use_container_width=True, config={'displayModeBar': False})
-
+        st.plotly_chart(fig_cpt, width='stretch', config={'displayModeBar': False})
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ── Procedure Contract Rate vs Year (2025 vs 2026)
+# ── Procedure Contract Rate vs Year (2025 vs 2026) — Avg Payment & Contract
 # ═══════════════════════════════════════════════════════════════════════════
 if 'code' in filtered.columns and 'Year' in filtered.columns:
     _code_label = ', '.join(selected_code) if selected_code else 'All'
-    _yoy_title = (
-        f"CPT {_code_label} — Avg Payment &amp; Contract Rate (2025 vs 2026)"
-        if selected_code
-        else "Procedure Contract Rate vs Year — Avg Payment &amp; Avg Contract Rate (2025 vs 2026)"
-    )
+    _yoy_title = f"CPT {_code_label} — Avg Payment &amp; Contract Rate (2025 vs 2026)" if selected_code else "Procedure Contract Rate vs Year — Avg Payment &amp; Avg Contract Rate (2025 vs 2026)"
     st.markdown(f"<div class='section-header'>{_yoy_title}</div>", unsafe_allow_html=True)
 
-    mapped_yr = (
-        filtered[filtered['Categories'] == 'Mapped Contract']
-        if 'Categories' in filtered.columns and (filtered['Categories'] == 'Mapped Contract').sum() > 0
-        else filtered.copy()
-    )
+    mapped_yr = filtered[filtered['Categories'] == 'Mapped Contract'] if 'Categories' in filtered.columns and (filtered['Categories'] == 'Mapped Contract').sum() > 0 else filtered
 
     if selected_code:
         yr_df = mapped_yr.copy()
@@ -1012,14 +769,14 @@ if 'code' in filtered.columns and 'Year' in filtered.columns:
         yr_df['code_str'] = yr_df['code'].astype(str)
 
     yr_grp = yr_df.groupby(['code_str', 'Year']).agg(
-        Avg_Payment=('Total_Payment', 'mean'),
-        Avg_Contract=('Allowed_Contract_Num', 'mean'),
-        Count=('Total_Payment', 'count')
+        Avg_Payment=('Total_Payment',        'mean'),
+        Avg_Contract=('Allowed_Contract_Num','mean'),
+        Count=('Total_Payment',              'count')
     ).reset_index()
 
     years_present   = sorted(yr_grp['Year'].dropna().unique().astype(int).tolist())
-    colors_pay      = {2025: '#60a5fa', 2026: '#1d4ed8'}
-    colors_contract = {2025: '#fcd34d', 2026: '#b45309'}
+    colors_pay      = {2025: '#3b82f6', 2026: '#1d4ed8'}
+    colors_contract = {2025: '#fbbf24', 2026: '#d97706'}
 
     col_yr1, col_yr2 = st.columns(2)
 
@@ -1038,17 +795,16 @@ if 'code' in filtered.columns and 'Year' in filtered.columns:
                 text=[f'${v:,.0f}' for v in sub['Avg_Payment']],
                 textposition='outside',
                 textfont=dict(size=9, color='#64748b'),
-                hovertemplate=f'<b>%{{x}}</b> — {yr}<br>Avg Payment: $%{{y:,.0f}}<extra></extra>'
             ))
         fig_yr1.update_layout(**PLOTLY_BASE,
             legend=LEGEND,
-            title=dict(text='Avg Actual Payment per CPT — 2025 vs 2026', font=TITLE_FONT),
+            title=dict(text='Avg Actual Payment per CPT \u2014 2025 vs 2026', font=TITLE_FONT),
             barmode='group', height=340,
             yaxis_tickprefix='$',
             bargap=0.25, bargroupgap=0.08,
             xaxis_type='category', xaxis_tickangle=-35,
         )
-        st.plotly_chart(fig_yr1, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig_yr1, width='stretch', config={'displayModeBar': False})
 
     with col_yr2:
         fig_yr2 = go.Figure()
@@ -1065,30 +821,28 @@ if 'code' in filtered.columns and 'Year' in filtered.columns:
                 text=[f'${v:,.0f}' for v in sub['Avg_Contract']],
                 textposition='outside',
                 textfont=dict(size=9, color='#64748b'),
-                hovertemplate=f'<b>%{{x}}</b> — {yr}<br>Avg Contract: $%{{y:,.0f}}<extra></extra>'
             ))
         fig_yr2.update_layout(**PLOTLY_BASE,
             legend=LEGEND,
-            title=dict(text='Avg Contract Rate per CPT — 2025 vs 2026', font=TITLE_FONT),
+            title=dict(text='Avg Contract Rate per CPT \u2014 2025 vs 2026', font=TITLE_FONT),
             barmode='group', height=340,
             yaxis_tickprefix='$',
             bargap=0.25, bargroupgap=0.08,
             xaxis_type='category', xaxis_tickangle=-35,
         )
-        st.plotly_chart(fig_yr2, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig_yr2, width='stretch', config={'displayModeBar': False})
 
-    # ── YoY summary cards ──────────────────────────────────────────────────
     if 2025 in years_present and 2026 in years_present:
-        avg_pay_25 = float(yr_grp[yr_grp['Year'] == 2025]['Avg_Payment'].mean())
-        avg_pay_26 = float(yr_grp[yr_grp['Year'] == 2026]['Avg_Payment'].mean())
-        avg_con_25 = float(yr_grp[yr_grp['Year'] == 2025]['Avg_Contract'].mean())
-        avg_con_26 = float(yr_grp[yr_grp['Year'] == 2026]['Avg_Contract'].mean())
+        avg_pay_25 = yr_grp[yr_grp['Year'] == 2025]['Avg_Payment'].mean()
+        avg_pay_26 = yr_grp[yr_grp['Year'] == 2026]['Avg_Payment'].mean()
+        avg_con_25 = yr_grp[yr_grp['Year'] == 2025]['Avg_Contract'].mean()
+        avg_con_26 = yr_grp[yr_grp['Year'] == 2026]['Avg_Contract'].mean()
 
         def yoy_badge(v25, v26):
             if v25 == 0:
-                return 0.0, 'badge-blue', '→'
+                return 0.0, 'badge-blue', '\u2192'
             chg = (v26 - v25) / v25 * 100
-            return chg, ('badge-green' if chg >= 0 else 'badge-red'), ('▲' if chg >= 0 else '▼')
+            return chg, ('badge-green' if chg >= 0 else 'badge-red'), ('\u25b2' if chg >= 0 else '\u25bc')
 
         chg_pay, col_pay, arr_pay = yoy_badge(avg_pay_25, avg_pay_26)
         chg_con, col_con, arr_con = yoy_badge(avg_con_25, avg_con_26)
@@ -1096,34 +850,35 @@ if 'code' in filtered.columns and 'Year' in filtered.columns:
         mc1, mc2, mc3, mc4 = st.columns(4)
         with mc1:
             st.markdown(f"""
-<div class='metric-card card-blue' style='padding:18px 20px;'>
+<div class='metric-card card-blue' style='padding:18px 22px;'>
     <div class='metric-label'>Avg Payment 2025</div>
     <div class='metric-value' style='font-size:22px;'>${avg_pay_25:,.0f}</div>
     <div class='metric-sub'>Across top CPT codes</div>
 </div>""", unsafe_allow_html=True)
         with mc2:
             st.markdown(f"""
-<div class='metric-card card-blue' style='padding:18px 20px;'>
+<div class='metric-card card-blue' style='padding:18px 22px;'>
     <div class='metric-label'>Avg Payment 2026</div>
     <div class='metric-value' style='font-size:22px;'>${avg_pay_26:,.0f}</div>
     <span class='badge {col_pay}'>{arr_pay} {chg_pay:+.1f}% YoY</span>
 </div>""", unsafe_allow_html=True)
         with mc3:
             st.markdown(f"""
-<div class='metric-card card-amber' style='padding:18px 20px;'>
+<div class='metric-card card-amber' style='padding:18px 22px;'>
     <div class='metric-label'>Avg Contract Rate 2025</div>
     <div class='metric-value' style='font-size:22px;'>${avg_con_25:,.0f}</div>
     <div class='metric-sub'>Across top CPT codes</div>
 </div>""", unsafe_allow_html=True)
         with mc4:
             st.markdown(f"""
-<div class='metric-card card-amber' style='padding:18px 20px;'>
+<div class='metric-card card-amber' style='padding:18px 22px;'>
     <div class='metric-label'>Avg Contract Rate 2026</div>
     <div class='metric-value' style='font-size:22px;'>${avg_con_26:,.0f}</div>
     <span class='badge {col_con}'>{arr_con} {chg_con:+.1f}% YoY</span>
 </div>""", unsafe_allow_html=True)
 
-        st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
+
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1137,30 +892,27 @@ with col_var:
         var_counts = filtered['Variance'].value_counts().reset_index()
         var_counts.columns = ['Status', 'Count']
         VAR_COLORS = {
-            'Less Than Contract':      '#dc2626',
-            'More than Contract':      '#059669',
-            'Matched':                 '#2563eb',
+            'Less Than Contract':      '#ef4444',
+            'More than Contract':      '#10b981',
+            'Matched':                 '#3b82f6',
             'No Contract vs Payment':  '#94a3b8'
         }
         colors = [VAR_COLORS.get(s, '#94a3b8') for s in var_counts['Status']]
-        total_var = var_counts['Count'].sum()
-
         fig6 = go.Figure(go.Bar(
             x=var_counts['Count'],
             y=var_counts['Status'],
             orientation='h',
-            marker_color=colors, marker_line_width=0,
-            text=[f'{c:,}  ({c/total_var*100:.1f}%)' for c in var_counts['Count']],
+            marker_color=colors,
+            marker_line_width=0,
+            text=var_counts['Count'].apply(lambda x: f'{x:,}'),
             textposition='outside',
-            textfont=dict(color='#64748b', size=10),
-            hovertemplate='<b>%{y}</b><br>Count: %{x:,}<extra></extra>'
+            textfont=dict(color='#64748b', size=11)
         ))
         fig6.update_layout(**PLOTLY_BASE,
             title=dict(text='Variance Status Distribution', font=TITLE_FONT),
-            height=280,
-            margin=dict(l=14, r=100, t=42, b=14),
+            height=270,
         )
-        st.plotly_chart(fig6, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig6, width='stretch', config={'displayModeBar': False})
 
 with col_doc:
     if 'Doctor' in filtered.columns:
@@ -1173,24 +925,16 @@ with col_doc:
         doc_grp = doc_grp.sort_values('Under', ascending=False).head(8)
 
         fig7 = go.Figure()
-        fig7.add_trace(go.Bar(
-            name='Actual Payment', x=doc_grp['Doctor'], y=doc_grp['Total'] / 1e3,
-            marker_color='#2563eb', opacity=0.9, marker_line_width=0,
-            hovertemplate='<b>%{x}</b><br>Actual: $%{y:,.1f}K<extra></extra>'
-        ))
-        fig7.add_trace(go.Bar(
-            name='Contract Allowed', x=doc_grp['Doctor'], y=doc_grp['Allowed'] / 1e3,
-            marker_color='#fca5a5', opacity=0.9, marker_line_width=0,
-            hovertemplate='<b>%{x}</b><br>Allowed: $%{y:,.1f}K<extra></extra>'
-        ))
+        fig7.add_trace(go.Bar(name='Actual Payment', x=doc_grp['Doctor'], y=doc_grp['Total']/1e3,   marker_color='#3b82f6', opacity=0.9, marker_line_width=0))
+        fig7.add_trace(go.Bar(name='Contract Allowed', x=doc_grp['Doctor'], y=doc_grp['Allowed']/1e3, marker_color='#fca5a5', opacity=0.9, marker_line_width=0))
         fig7.update_layout(**PLOTLY_BASE,
             legend=LEGEND,
             title=dict(text='Top 8 Providers — Actual vs Contract Allowed ($K)', font=TITLE_FONT),
-            barmode='group', height=280,
+            barmode='group', height=270,
             yaxis_tickprefix='$', yaxis_ticksuffix='K',
             bargap=0.25, bargroupgap=0.06
         )
-        st.plotly_chart(fig7, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig7, width='stretch', config={'displayModeBar': False})
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1206,52 +950,24 @@ show_cols = [c for c in [
 
 table_df = filtered[show_cols].copy()
 
-search_col, count_col = st.columns([4, 1])
-with search_col:
-    search = st.text_input(
-        "Search records",
-        placeholder="🔍  Search across ticket #, doctor, CPT code, carrier…",
-        label_visibility="collapsed",
-        key="records_search"
-    )
-with count_col:
-    st.markdown(f"""
-        <div style='background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px;
-                    padding:9px 14px; text-align:center; margin-top:2px;'>
-            <div style='font-size:9px; color:#94a3b8; font-weight:700; letter-spacing:1px;
-                        text-transform:uppercase; font-family:Outfit,sans-serif;'>Records</div>
-            <div style='font-size:18px; font-weight:800; color:#0f172a;
-                        font-family:DM Mono,monospace; line-height:1.2;'>{len(table_df):,}</div>
-        </div>
-    """, unsafe_allow_html=True)
-
-if search:
-    mask_search = table_df.astype(str).apply(
-        lambda col: col.str.contains(search, case=False, na=False)
-    ).any(axis=1)
-    table_df = table_df[mask_search]
-
-st.dataframe(table_df.head(500), use_container_width=True, height=340)
-
-st.markdown(
-    f"<div style='font-size:11px; color:#94a3b8; text-align:right; margin-top:6px; "
-    f"font-weight:500; font-family:DM Sans,sans-serif;'>"
-    f"Showing up to 500 of <strong style='color:#475569;'>{len(table_df):,}</strong> matching rows "
-    f"(of <strong style='color:#475569;'>{len(filtered):,}</strong> filtered)</div>",
-    unsafe_allow_html=True
+search = st.text_input(
+    "Search records",
+    placeholder="Type to search across all columns (ticket #, doctor, CPT, carrier…)",
+    label_visibility="collapsed",
+    key="records_search"
 )
 
-# ── Footer ─────────────────────────────────────────────────────────────────
-st.markdown("""
-    <div style='margin-top:32px; padding:18px 0 8px 0; border-top:1px solid #e2e8f0;
-                display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;'>
-        <div style='font-size:11px; color:#94a3b8; font-weight:500;'>
-            ⚕ <strong style='color:#475569;'>Jorie AI</strong> &nbsp;·&nbsp;
-            ONE AR &nbsp;·&nbsp; Contract Rate Variance Intelligence Platform
-        </div>
-        <div style='font-size:10px; color:#cbd5e1; font-weight:600; letter-spacing:0.8px;
-                    text-transform:uppercase; font-family:Outfit,sans-serif;'>
-            Payment Analysis Dashboard
-        </div>
-    </div>
-""", unsafe_allow_html=True)
+if search:
+    mask = table_df.astype(str).apply(
+        lambda col: col.str.contains(search, case=False, na=False)
+    ).any(axis=1)
+    table_df = table_df[mask]
+
+st.dataframe(table_df.head(500), use_container_width=True, height=330)
+
+st.markdown(
+    f"<div style='font-size:11px; color:#94a3b8; text-align:right; margin-top:6px; font-weight:500;'>"
+    f"Showing up to 500 of <b>{len(table_df):,}</b> matching rows "
+    f"(of {len(filtered):,} filtered)</div>",
+    unsafe_allow_html=True
+)
