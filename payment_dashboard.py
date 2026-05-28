@@ -3,8 +3,6 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
-import requests
-import io
 
 
 # ── Page Config ────────────────────────────────────────────────────────────
@@ -199,7 +197,7 @@ st.markdown("""
         border: 1px solid #e2e8f0;
         box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
-
+    
     [data-testid="stToolbar"] { display: none !important; }
     header { background: transparent !important; }
 
@@ -223,16 +221,16 @@ st.markdown("""
 # ── Load Data ──────────────────────────────────────────────────────────────
 @st.cache_data
 def load_data():
-    file_id = "1VbDVAl9ZQYXe_zpnP_NYMTI7nA2ovUjN"
+    file2 = r"C:\Users\KunalVaish\OneDrive - Jorie AI\Cartage\Final Reports_Carthage\Carthage_AR_Documents\Contract Rate Mapping\Mapped_Output.csv"
     try:
-        import gdown
-        import os
-        output_path = "/tmp/Mapped_Output.csv"
-        if not os.path.exists(output_path):
-            url = f"https://drive.google.com/uc?id={file_id}"
-            gdown.download(url, output_path, quiet=False)
-
-        df = pd.read_csv(output_path, low_memory=False)
+        
+        df = pd.read_csv(file2, low_memory=False, dtype={
+            'Ticket_Number': str,
+            'cpt DUP': str,
+            'Variance Amount': str,
+            'Allowed Contract': str,
+            '50% Contract': str,
+})
         df.columns = df.columns.str.strip()
 
         df['service_date'] = pd.to_datetime(df['service_date'], errors='coerce').dt.strftime('%m/%d/%Y')
@@ -278,6 +276,7 @@ TITLE_FONT = dict(color='#1e293b', size=13, family='Plus Jakarta Sans')
 
 PALETTE = ['#3b82f6','#ef4444','#8b5cf6','#f59e0b','#10b981','#ec4899','#06b6d4','#f97316']
 PALETTE_BLUE = ['#1d4ed8','#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe','#dbeafe','#eff6ff']
+
 
 # ── Sidebar ────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -325,7 +324,7 @@ with st.sidebar:
         selected_code = st.multiselect("CPT Code", code_options, default=[], key="cpt_code", placeholder="All", label_visibility="collapsed")
 
     else:
-        selected_year = selected_month = selected_carrier = selected_variance = selected_fc = selected_cpt = selected_code = 'All'
+        selected_year = selected_month = selected_carrier = selected_variance = selected_fc = selected_cpt = selected_code = []
 
     st.markdown("<hr style='border:none; border-top:1.5px solid #f1f5f9; margin-top:28px;'>", unsafe_allow_html=True)
     st.markdown("<div style='font-size:10px; color:#cbd5e1; text-align:center; padding-top:8px; font-weight:600; letter-spacing:0.8px;'>ONE AR · JORIE AI</div>", unsafe_allow_html=True)
@@ -395,13 +394,14 @@ with col_logo:
             <a href='https://github.com/kunalvaish49-cpu/VisualCode_UB-04' target='_blank' 
                style='text-decoration:none;'>
                 <img src='https://raw.githubusercontent.com/kunalvaish49-cpu/VisualCode_UB-04/20be2ac615bd0074353bf7f7b9784af81e6cc040/Jorie%20AI%20Image.webp'
-                     style='height:96px; width:auto; border-radius:10px; 
+                     style='height:160px; width:auto; border-radius:10px; 
                             box-shadow:0 2px 10px rgba(0,0,0,0.12);'
                      title='Jorie AI — GitHub'
                 />
             </a>
         </div>
     """, unsafe_allow_html=True)
+
 
 with col_title:
     active_filters = sum([
@@ -493,7 +493,7 @@ with col_line:
                 Allowed=('Allowed_Contract_Num', 'sum')
             ).reset_index().sort_values('Actual', ascending=False).head(8)
             x_col = 'Insurance_Carrier'
-            chart_title = f'Actual vs Allowed — by Carrier ({selected_fc})'
+            chart_title = f"Actual vs Allowed — by Carrier ({', '.join(selected_fc)})"
         else:
             fc_grp = filtered.groupby('Update_FC').agg(
                 Actual=('Total_Payment', 'sum'),
@@ -943,9 +943,9 @@ with col_doc:
 st.markdown("<div class='section-header'>Detailed Records</div>", unsafe_allow_html=True)
 
 show_cols = [c for c in [
-    'Ticket_Number', 'service_date', 'Insurance_Carrier', 'Doctor',
+    'Ticket_Number', 'service_date', 'carrier', 
     'code', 'Modifier', 'CPT_Category', 'Doctor_Speciality',
-    'Total_Payment', 'Allowed Contract', 'Variance', 'Variance Amount'
+    'Total_Payment', 'Allowed Contract', 'Variance Amount', 'Variance','Doctor'
 ] if c in filtered.columns]
 
 table_df = filtered[show_cols].copy()
