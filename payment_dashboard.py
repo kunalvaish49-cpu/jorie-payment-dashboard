@@ -223,7 +223,7 @@ st.markdown("""
 # ── Load Data ──────────────────────────────────────────────────────────────
 @st.cache_data
 def load_data():
-    file_id = "1Y2xXFV5vAyHk0g6XJJV0kIVd9ZUwbUod"
+    file_id = "1VbDVAl9ZQYXe_zpnP_NYMTI7nA2ovUjN"
     try:
         import gdown
         import os
